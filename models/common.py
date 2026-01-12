@@ -1,6 +1,7 @@
 # YOLOv5 common modules
 
 import math
+import warnings
 from pathlib import Path
 
 import numpy as np
