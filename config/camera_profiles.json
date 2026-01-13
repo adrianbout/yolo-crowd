@@ -1,0 +1,195 @@
+{
+  "profiles": {
+    "thermal_default": {
+      "description": "Optimized settings for thermal cameras",
+      "camera_type": "thermal",
+      "resolution": {
+        "width": 640,
+        "height": 480
+      },
+      "inference_settings": {
+        "confidence_threshold": 0.4,
+        "iou_threshold": 0.45,
+        "use_preprocessing": true
+      },
+      "preprocessing": {
+        "normalize": true,
+        "equalize_histogram": false,
+        "denoise": true,
+        "clahe": false
+      },
+      "stream_settings": {
+        "fps_target": 10,
+        "codec": "h264",
+        "transport": "tcp"
+      },
+      "hikvision_settings": {
+        "ircut_filter": "night",
+        "exposure_type": "auto",
+        "white_balance": "auto1",
+        "color": {
+          "brightness": 50,
+          "contrast": 60,
+          "saturation": 40
+        },
+        "sharpness": 60,
+        "noise_reduce": {
+          "mode": "general",
+          "level": 60
+        },
+        "wdr": {
+          "mode": "close",
+          "level": 0
+        },
+        "blc": {
+          "enabled": false
+        }
+      }
+    },
+    "infrared_default": {
+      "description": "Optimized settings for infrared cameras",
+      "camera_type": "infrared",
+      "resolution": {
+        "width": 640,
+        "height": 480
+      },
+      "inference_settings": {
+        "confidence_threshold": 0.4,
+        "iou_threshold": 0.45,
+        "use_preprocessing": true
+      },
+      "preprocessing": {
+        "normalize": true,
+        "equalize_histogram": true,
+        "denoise": false,
+        "clahe": true
+      },
+      "stream_settings": {
+        "fps_target": 10,
+        "codec": "h264",
+        "transport": "tcp"
+      },
+      "hikvision_settings": {
+        "ircut_filter": "night",
+        "exposure_type": "auto",
+        "white_balance": "auto1",
+        "color": {
+          "brightness": 55,
+          "contrast": 55,
+          "saturation": 30
+        },
+        "sharpness": 70,
+        "noise_reduce": {
+          "mode": "general",
+          "level": 70
+        },
+        "wdr": {
+          "mode": "close",
+          "level": 0
+        },
+        "blc": {
+          "enabled": false
+        }
+      }
+    },
+    "rgb_default": {
+      "description": "Standard settings for RGB cameras",
+      "camera_type": "rgb",
+      "resolution": {
+        "width": 640,
+        "height": 480
+      },
+      "inference_settings": {
+        "confidence_threshold": 0.5,
+        "iou_threshold": 0.45,
+        "use_preprocessing": false
+      },
+      "preprocessing": {
+        "normalize": false,
+        "equalize_histogram": false,
+        "denoise": false,
+        "clahe": false
+      },
+      "stream_settings": {
+        "fps_target": 15,
+        "codec": "h264",
+        "transport": "tcp"
+      },
+      "hikvision_settings": {
+        "ircut_filter": "auto",
+        "exposure_type": "auto",
+        "white_balance": "auto1",
+        "color": {
+          "brightness": 50,
+          "contrast": 50,
+          "saturation": 50
+        },
+        "sharpness": 50,
+        "noise_reduce": {
+          "mode": "general",
+          "level": 50
+        },
+        "wdr": {
+          "mode": "open",
+          "level": 50
+        },
+        "blc": {
+          "enabled": false
+        }
+      }
+    },
+    "high_quality": {
+      "description": "High quality RGB for better accuracy",
+      "camera_type": "rgb",
+      "resolution": {
+        "width": 1280,
+        "height": 720
+      },
+      "inference_settings": {
+        "confidence_threshold": 0.6,
+        "iou_threshold": 0.5,
+        "use_preprocessing": false
+      },
+      "preprocessing": {
+        "normalize": false,
+        "equalize_histogram": false,
+        "denoise": false,
+        "clahe": false
+      },
+      "stream_settings": {
+        "fps_target": 10,
+        "codec": "h265",
+        "transport": "tcp"
+      },
+      "hikvision_settings": {
+        "ircut_filter": "auto",
+        "exposure_type": "auto",
+        "white_balance": "auto1",
+        "color": {
+          "brightness": 50,
+          "contrast": 50,
+          "saturation": 50
+        },
+        "sharpness": 50,
+        "noise_reduce": {
+          "mode": "general",
+          "level": 40
+        },
+        "wdr": {
+          "mode": "open",
+          "level": 60
+        },
+        "blc": {
+          "enabled": false
+        }
+      }
+    }
+  },
+  "detection_settings": {
+    "batch_size": 20,
+    "model_path": "weights/yolo-crowd.pt",
+    "device": "cuda",
+    "half_precision": true,
+    "class_filter": [0]
+  }
+}

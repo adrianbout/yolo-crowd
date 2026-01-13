@@ -1,0 +1,32 @@
+{
+  "cameras": [
+    {
+      "id": "cam_001",
+      "name": "Test Video 1",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "test",
+        "rtsp_url": "v.mp4",
+        "isapi_base": "http://localhost/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video file",
+        "floor": 1
+      }
+    }
+  ],
+  "global_settings": {
+    "max_cameras": 20,
+    "reconnect_attempts": 1,
+    "reconnect_delay_seconds": 2,
+    "frame_skip": 0,
+    "stream_buffer_size": 1,
+    "use_hikvision_sdk": false
+  }
+}

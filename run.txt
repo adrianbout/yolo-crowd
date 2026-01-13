@@ -1,1 +1,2 @@
 python detect.py --weights weights/yolo-crowd.pt --source rtsp://localhost:8554/camera2_thermal_201 --img-size 608 --view-img
+python detect.py --weights weights/yolo-crowd.pt --source v.mp4 --img-size 608 --view-img

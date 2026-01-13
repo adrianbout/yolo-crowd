@@ -1,0 +1,42 @@
+{
+  "rois": {
+    "cam_001": {
+      "enabled": false,
+      "polygons": [],
+      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+    },
+    "cam_002": {
+      "enabled": false,
+      "polygons": [],
+      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+    },
+    "cam_003": {
+      "enabled": false,
+      "polygons": [],
+      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+    },
+    "cam_004": {
+      "enabled": false,
+      "polygons": [],
+      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+    }
+  },
+  "examples": {
+    "example_camera_with_roi": {
+      "enabled": true,
+      "polygons": [
+        {
+          "name": "counting_zone_1",
+          "points": [
+            [100, 100],
+            [500, 100],
+            [500, 400],
+            [100, 400]
+          ],
+          "description": "Main counting area - excludes overlap with adjacent camera"
+        }
+      ],
+      "notes": "Multiple polygons can be defined per camera. Detections must be inside at least one polygon."
+    }
+  }
+}

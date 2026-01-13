@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartChairCounter - Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>SmartChairCounter Dashboard</h1>
+            <div class="status-indicator">
+                <span class="status-dot" id="connectionStatus"></span>
+                <span id="connectionText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Summary Section -->
+        <div class="summary-section">
+            <div class="summary-card">
+                <div class="summary-title">Total Count</div>
+                <div class="summary-value" id="totalCount">0</div>
+                <div class="summary-subtitle" id="lastUpdate">Last updated: --</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Active Cameras</div>
+                <div class="summary-value" id="activeCameras">0</div>
+                <div class="summary-subtitle">cameras connected</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">System Status</div>
+                <div class="summary-value status-value" id="systemStatus">--</div>
+                <div class="summary-subtitle" id="uptime">Uptime: --</div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <button class="btn btn-primary" onclick="refreshData()">Refresh</button>
+            <button class="btn btn-secondary" onclick="toggleROIMode()">Edit ROIs</button>
+            <button class="btn btn-warning" onclick="resetCounts()">Reset Counts</button>
+        </div>
+
+        <!-- Camera Grid -->
+        <div class="camera-grid" id="cameraGrid">
+            <!-- Cameras will be dynamically loaded here -->
+        </div>
+
+        <!-- ROI Editor Modal -->
+        <div id="roiEditorModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>ROI Editor - <span id="roiCameraName"></span></h2>
+                    <span class="close" onclick="closeROIEditor()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="roi-canvas-container">
+                        <canvas id="roiCanvas"></canvas>
+                    </div>
+                    <div class="roi-controls">
+                        <div class="roi-info">
+                            <p>Click on the image to draw ROI polygon. Double-click to finish.</p>
+                            <p>ROI polygons exclude overlapping areas from counting.</p>
+                        </div>
+                        <div class="roi-buttons">
+                            <button class="btn btn-primary" onclick="saveROI()">Save ROI</button>
+                            <button class="btn btn-secondary" onclick="clearROI()">Clear ROI</button>
+                            <button class="btn btn-danger" onclick="cancelROI()">Cancel</button>
+                        </div>
+                        <div class="roi-status" id="roiStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/camera-grid.js"></script>
+    <script src="js/roi-editor.js"></script>
+    <script src="js/websocket-client.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

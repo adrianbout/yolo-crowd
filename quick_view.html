@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartChairCounter - Quick Video View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .status {
+            background: #2c3e50;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .count {
+            font-size: 48px;
+            font-weight: bold;
+            color: #3498db;
+        }
+        #videoFrame {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .info {
+            margin-top: 20px;
+            color: #95a5a6;
+        }
+        .connected {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .disconnected {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🪑 SmartChairCounter - Live Feed</h1>
+
+    <div class="status">
+        <div>Total Count: <span class="count" id="totalCount">-</span></div>
+        <div class="info">
+            Camera: <span id="cameraStatus" class="disconnected">Connecting...</span> |
+            FPS: <span id="fps">-</span> |
+            Last Update: <span id="lastUpdate">-</span>
+        </div>
+    </div>
+
+    <div>
+        <img id="videoFrame" src="http://localhost:8000/api/cameras/cam_001/frame" alt="Loading video feed...">
+    </div>
+
+    <div class="info">
+        Press F5 to refresh | <a href="frontend/index.html" style="color: #3498db;">Open Full Dashboard</a>
+    </div>
+
+    <script>
+        // Refresh the frame periodically
+        function refreshFrame() {
+            const img = document.getElementById('videoFrame');
+            const timestamp = new Date().getTime();
+            img.src = `http://localhost:8000/api/cameras/cam_001/frame?t=${timestamp}`;
+        }
+
+        // Update status
+        async function updateStatus() {
+            try {
+                const response = await fetch('http://localhost:8000/api/status');
+                const data = await response.json();
+
+                // Update count
+                document.getElementById('totalCount').textContent = data.system.total_count || 0;
+
+                // Update camera status
+                const camera = data.cameras.cam_001;
+                const statusEl = document.getElementById('cameraStatus');
+                if (camera && camera.connected) {
+                    statusEl.textContent = 'Connected';
+                    statusEl.className = 'connected';
+                    document.getElementById('fps').textContent = Math.round(camera.fps);
+                } else {
+                    statusEl.textContent = 'Disconnected';
+                    statusEl.className = 'disconnected';
+                    document.getElementById('fps').textContent = '0';
+                }
+
+                // Update timestamp
+                const now = new Date();
+                document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Error fetching status:', error);
+                document.getElementById('cameraStatus').textContent = 'Error';
+                document.getElementById('cameraStatus').className = 'disconnected';
+            }
+        }
+
+        // Refresh frame every 500ms (2 FPS display)
+        setInterval(refreshFrame, 500);
+
+        // Update status every 2 seconds
+        setInterval(updateStatus, 2000);
+        updateStatus();
+    </script>
+</body>
+</html>
