@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Global instances
 state_manager = StateManager(config_dir="config")
-detection_service = DetectionService(state_manager, batch_size=20, inference_interval=0.5)
+detection_service = DetectionService(state_manager, batch_size=1, inference_interval=0.0)
 
 
 @asynccontextmanager

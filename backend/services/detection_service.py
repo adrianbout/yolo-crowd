@@ -73,7 +73,10 @@ class DetectionService:
             model_path=model_path,
             device=detection_settings.get("device", "cuda"),
             half_precision=detection_settings.get("half_precision", True),
-            class_filter=detection_settings.get("class_filter", None)
+            class_filter=detection_settings.get("class_filter", None),
+            img_size=detection_settings.get("img_size", 608),
+            confidence_threshold=detection_settings.get("confidence_threshold", 0.25),
+            iou_threshold=detection_settings.get("iou_threshold", 0.45)
         )
 
         # Initialize ROI filter
@@ -175,11 +178,12 @@ class DetectionService:
                 # Statistics
                 self.total_inferences += 1
 
-                # Log
+                # Log with timing info
                 total_count = sum(counts.values())
-                logger.debug(
+                elapsed = time.time() - loop_start
+                logger.info(
                     f"Inference {self.total_inferences}: {len(frames)} cameras, "
-                    f"{total_count} total detections"
+                    f"{total_count} detections, {elapsed*1000:.1f}ms"
                 )
 
                 # Control inference rate

@@ -5,6 +5,7 @@ Handles batched inference for multiple camera streams
 
 import sys
 import torch
+import torch.backends.cudnn as cudnn
 import cv2
 import numpy as np
 from typing import List, Dict, Tuple, Optional
@@ -20,6 +21,8 @@ if str(project_root) not in sys.path:
 try:
     from models.experimental import attempt_load
     from utils.general import non_max_suppression, scale_coords
+    from utils.torch_utils import select_device
+    from utils.datasets import letterbox
     CUSTOM_YOLO_AVAILABLE = True
 except ImportError:
     CUSTOM_YOLO_AVAILABLE = False
@@ -63,18 +66,36 @@ class YOLODetector:
         model_path: str,
         device: str = "cuda",
         half_precision: bool = True,
-        class_filter: Optional[List[int]] = None
+        class_filter: Optional[List[int]] = None,
+        img_size: int = 608,
+        confidence_threshold: float = 0.25,
+        iou_threshold: float = 0.45
     ):
-        # Auto-detect device if CUDA requested but not available
-        if device == "cuda" and not torch.cuda.is_available():
-            logger.warning("CUDA requested but not available, using CPU")
-            device = "cpu"
+        # Use select_device from YOLOv5 utils (handles CUDA properly)
+        if CUSTOM_YOLO_AVAILABLE:
+            # select_device expects '' for auto, '0' for cuda:0, 'cpu' for cpu
+            device_arg = '' if device == 'cuda' else device
+            torch_device = select_device(device_arg)
+            self.device = str(torch_device)
+        else:
+            # Fallback: manual check
+            if device == "cuda" and not torch.cuda.is_available():
+                logger.warning("CUDA requested but not available, using CPU")
+                device = "cpu"
+            self.device = device
 
-        self.device = device
-        self.half_precision = half_precision and device == "cuda"
+        self.half_precision = half_precision and 'cuda' in self.device
         self.class_filter = class_filter
+        self.img_size = img_size
+        self.confidence_threshold = confidence_threshold
+        self.iou_threshold = iou_threshold
+
+        # Enable cudnn benchmark for faster inference on fixed input sizes
+        if 'cuda' in self.device:
+            cudnn.benchmark = True
 
         logger.info(f"Loading YOLO model from {model_path}")
+        logger.info(f"Settings: img_size={img_size}, conf={confidence_threshold}, iou={iou_threshold}")
         self.model = self._load_model(model_path)
         logger.info(f"Model loaded successfully on {self.device}")
 
@@ -160,7 +181,7 @@ class YOLODetector:
     def _warmup(self):
         """Warm up the model with dummy inference"""
         logger.info("Warming up model...")
-        dummy_img = torch.zeros((1, 3, 640, 640)).to(self.device)
+        dummy_img = torch.zeros((1, 3, self.img_size, self.img_size)).to(self.device)
         if self.half_precision:
             dummy_img = dummy_img.half()
 
@@ -169,22 +190,25 @@ class YOLODetector:
 
         logger.info("Model warmup complete")
 
-    def preprocess_frame(self, frame: np.ndarray, target_size: Tuple[int, int] = (640, 640)) -> np.ndarray:
+    def preprocess_frame(self, frame: np.ndarray) -> np.ndarray:
         """
-        Preprocess frame for inference
+        Preprocess frame for inference (same as detect.py)
         Args:
             frame: Input frame (BGR)
-            target_size: Target size (width, height)
         Returns:
-            Preprocessed frame
+            Preprocessed frame ready for model
         """
-        # Resize
-        frame = cv2.resize(frame, target_size)
+        # Use letterbox for proper aspect ratio (same as detect.py)
+        if CUSTOM_YOLO_AVAILABLE:
+            img = letterbox(frame, self.img_size, stride=32)[0]
+        else:
+            img = cv2.resize(frame, (self.img_size, self.img_size))
 
-        # Convert BGR to RGB
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Convert BGR to RGB using numpy slice (faster than cv2.cvtColor)
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, HWC to CHW
+        img = np.ascontiguousarray(img)  # Contiguous memory for faster GPU transfer
 
-        return frame
+        return img
 
     def apply_preprocessing(self, frame: np.ndarray, preprocessing_config: Dict) -> np.ndarray:
         """
@@ -235,6 +259,9 @@ class YOLODetector:
         if not frames:
             return {}
 
+        # Store original frame shapes for coordinate scaling
+        original_shapes = [f.shape for f in frames]
+
         # Apply preprocessing if needed
         if preprocessing_configs:
             processed_frames = []
@@ -246,22 +273,14 @@ class YOLODetector:
             processed_frames = [self.preprocess_frame(f) for f in frames]
 
         # Convert to tensor batch
-        # processed_frames is list of numpy arrays [H, W, C]
-        # Convert to tensor [B, C, H, W]
-        img_tensors = []
-        for frame in processed_frames:
-            # Convert to tensor and normalize
-            img = torch.from_numpy(frame).to(self.device)
-            img = img.permute(2, 0, 1)  # HWC to CHW
-            img = img.float() / 255.0    # 0-255 to 0.0-1.0
+        # processed_frames is list of numpy arrays [C, H, W] (already transposed in preprocess_frame)
+        # Stack into batch tensor [B, C, H, W]
+        img_batch = np.stack(processed_frames, 0)  # Stack numpy arrays first
+        img_batch = torch.from_numpy(img_batch).to(self.device)
+        img_batch = img_batch.float() / 255.0  # 0-255 to 0.0-1.0
 
-            if self.half_precision:
-                img = img.half()
-
-            img_tensors.append(img)
-
-        # Stack into batch
-        img_batch = torch.stack(img_tensors, 0)
+        if self.half_precision:
+            img_batch = img_batch.half()
 
         # Run inference
         with torch.no_grad():
@@ -282,16 +301,18 @@ class YOLODetector:
             if CUSTOM_YOLO_AVAILABLE:
                 pred = non_max_suppression(
                     pred,
-                    conf_thres=0.001,  # Will filter later per camera
-                    iou_thres=0.45
+                    conf_thres=self.confidence_threshold,
+                    iou_thres=self.iou_threshold
                 )
 
         # Parse results
         detections_by_camera = {}
 
+        # Get the inference image shape (after letterbox)
+        img_shape = img_batch.shape[2:]  # [H, W]
+
         for idx, (camera_id, inference_config) in enumerate(zip(camera_ids, inference_configs)):
             conf_thresh = inference_config.get("confidence_threshold", 0.5)
-            iou_thresh = inference_config.get("iou_threshold", 0.45)
 
             # Get detections for this frame
             detections = []
@@ -299,10 +320,20 @@ class YOLODetector:
             # Handle different result formats
             if isinstance(pred, list):
                 # Custom YOLOv5 with NMS: list of tensors per image
-                frame_pred = pred[idx].cpu().numpy()  # [x1, y1, x2, y2, conf, class]
+                frame_pred = pred[idx]  # Keep as tensor for scale_coords
             else:
                 # Torch.hub format
-                frame_pred = pred[idx].cpu().numpy()
+                frame_pred = pred[idx]
+
+            # Scale coordinates back to original frame size
+            if len(frame_pred) > 0 and CUSTOM_YOLO_AVAILABLE:
+                # Clone to avoid modifying original
+                frame_pred = frame_pred.clone()
+                # scale_coords(img_shape, coords, original_shape)
+                frame_pred[:, :4] = scale_coords(img_shape, frame_pred[:, :4], original_shapes[idx]).round()
+
+            # Convert to numpy for iteration
+            frame_pred = frame_pred.cpu().numpy()
 
             for det in frame_pred:
                 x1, y1, x2, y2, conf, cls = det

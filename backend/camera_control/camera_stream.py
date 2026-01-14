@@ -144,7 +144,7 @@ class CameraStream:
                 if not ret or frame is None:
                     # For video files, loop back to the beginning
                     if self.is_video_file:
-                        logger.info(f"Camera {self.camera_id}: Reached end of video, looping...")
+                        # Silently loop - don't spam logs
                         self.capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
                         ret, frame = self.capture.read()
 
@@ -159,9 +159,9 @@ class CameraStream:
                         self.connected = False
                         continue
 
-                # Update latest frame
+                # Update latest frame (no copy needed here, copy on read)
                 with self.frame_lock:
-                    self.latest_frame = frame.copy()
+                    self.latest_frame = frame
 
                 # Update FPS
                 self.frame_count += 1
@@ -172,9 +172,6 @@ class CameraStream:
                     self.fps = self.frame_count / elapsed
                     self.frame_count = 0
                     self.last_fps_time = current_time
-
-                # Small delay to control frame rate
-                time.sleep(0.001)
 
             except Exception as e:
                 logger.error(f"Camera {self.camera_id}: Error reading frame: {e}")

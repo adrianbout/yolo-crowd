@@ -111,10 +111,15 @@
         }
 
         // Refresh frame every 500ms (2 FPS display)
-        setInterval(refreshFrame, 500);
+        // Current: 500ms = 2 FPS
+        // setInterval(refreshFrame, 500);
 
-        // Update status every 2 seconds
-        setInterval(updateStatus, 2000);
+        // // Faster: 100ms = 10 FPS  
+        setInterval(refreshFrame, 100);
+
+        // // Or even: 33ms = 30 FPS
+        // setInterval(refreshFrame, 33);
+
         updateStatus();
     </script>
 </body>
