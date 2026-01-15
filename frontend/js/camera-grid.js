@@ -72,12 +72,12 @@ class CameraGrid {
     }
 
     startFeedUpdates() {
-        // Update camera feeds every 2 seconds
+        // Update camera feeds every 100ms (10 FPS) like quick_view
         this.feedUpdateInterval = setInterval(() => {
             this.cameras.forEach(camera => {
                 this.updateCameraFeed(camera.id);
             });
-        }, 2000);
+        }, 100);
     }
 
     async updateCameraFeed(cameraId) {

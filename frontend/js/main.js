@@ -19,8 +19,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }, 1000);
 
+    // HTTP polling fallback for status updates (like quick_view)
+    // This ensures counter updates even if WebSocket is not working
+    setInterval(updateStatusHTTP, 500);
+    updateStatusHTTP();
+
     console.log('SmartChairCounter Dashboard Loaded');
 });
+
+// HTTP polling fallback for status updates (like quick_view)
+async function updateStatusHTTP() {
+    try {
+        const response = await fetch(`${API_BASE}/status`);
+        const data = await response.json();
+
+        // Update total count
+        const totalCountElement = document.getElementById('totalCount');
+        if (totalCountElement) {
+            totalCountElement.textContent = data.system.total_count || 0;
+        }
+
+        // Update last update time
+        const lastUpdateElement = document.getElementById('lastUpdate');
+        if (lastUpdateElement) {
+            const now = new Date();
+            lastUpdateElement.textContent = `Last updated: ${now.toLocaleTimeString()}`;
+        }
+
+        // Update active cameras count
+        const activeCamerasElement = document.getElementById('activeCameras');
+        if (activeCamerasElement && data.cameras) {
+            const connectedCount = Object.values(data.cameras)
+                .filter(cam => cam.connected).length;
+            activeCamerasElement.textContent = connectedCount;
+        }
+
+        // Update system status
+        const systemStatusElement = document.getElementById('systemStatus');
+        if (systemStatusElement) {
+            systemStatusElement.textContent = data.system.running ? 'Running' : 'Stopped';
+        }
+
+        // Update uptime
+        const uptimeElement = document.getElementById('uptime');
+        if (uptimeElement && data.system.uptime_seconds) {
+            const hours = Math.floor(data.system.uptime_seconds / 3600);
+            const minutes = Math.floor((data.system.uptime_seconds % 3600) / 60);
+            uptimeElement.textContent = `Uptime: ${hours}h ${minutes}m`;
+        }
+
+        // Update individual camera counts
+        if (data.cameras && cameraGrid) {
+            const countsByCamera = {};
+            Object.entries(data.cameras).forEach(([cameraId, camData]) => {
+                if (camData.count !== undefined) {
+                    countsByCamera[cameraId] = camData.count;
+                }
+            });
+            cameraGrid.updateCounts(countsByCamera);
+        }
+
+    } catch (error) {
+        console.error('Error fetching status via HTTP:', error);
+    }
+}
 
 // Cleanup on page unload
 window.addEventListener('beforeunload', () => {
