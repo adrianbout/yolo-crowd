@@ -59,13 +59,17 @@ class CameraGrid {
                     <span class="count-label">YOLO Count:</span>
                     <span class="count-value" id="count-${camera.id}">0</span>
                 </div>
+                <div class="camera-yolo-median">
+                    <span class="count-label">YOLO Median:</span>
+                    <span class="yolo-median-value" id="yolo-median-${camera.id}">0</span>
+                </div>
                 <div class="camera-median-count">
-                    <span class="count-label">Median Count:</span>
+                    <span class="count-label">Adjusted Count:</span>
                     <div class="median-controls">
                         <button class="btn-adjust btn-minus" onclick="adjustMedianCount('${camera.id}', -1)">-</button>
                         <span class="median-value" id="median-${camera.id}">0</span>
                         <button class="btn-adjust btn-plus" onclick="adjustMedianCount('${camera.id}', 1)">+</button>
-                        <button class="btn-reset-override" id="reset-override-${camera.id}" onclick="clearOverride('${camera.id}')" style="display: none;" title="Clear manual override">&#x21ba;</button>
+                        <button class="btn-reset-override" id="reset-override-${camera.id}" onclick="clearOverride('${camera.id}')" style="display: none;" title="Reset to YOLO median">&#x21ba;</button>
                     </div>
                 </div>
                 <div class="camera-actions">
@@ -166,10 +170,22 @@ class CameraGrid {
 
     updateMedianCounts(cameraData) {
         Object.entries(cameraData).forEach(([cameraId, data]) => {
-            if (data.median_count !== undefined) {
-                this.updateMedianCount(cameraId, data.median_count, data.has_override || false);
+            // Update YOLO median (always the calculated value)
+            if (data.yolo_median !== undefined) {
+                this.updateYoloMedian(cameraId, data.yolo_median);
+            }
+            // Update adjusted count (manual override or yolo median)
+            if (data.adjusted_count !== undefined) {
+                this.updateMedianCount(cameraId, data.adjusted_count, data.has_override || false);
             }
         });
+    }
+
+    updateYoloMedian(cameraId, yoloMedian) {
+        const yoloMedianElement = document.getElementById(`yolo-median-${cameraId}`);
+        if (yoloMedianElement) {
+            yoloMedianElement.textContent = yoloMedian;
+        }
     }
 
     stopFeedUpdates() {

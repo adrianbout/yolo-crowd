@@ -140,10 +140,16 @@ async def get_system_status():
     camera_status = detection_service.camera_manager.get_all_status() if detection_service.camera_manager else {}
 
     # Add median counts and override status to camera data
-    median_counts = state_manager.get_all_median_counts()
     for camera_id in camera_status:
-        camera_status[camera_id]["median_count"] = median_counts.get(camera_id, 0)
-        camera_status[camera_id]["has_override"] = state_manager.manual_overrides.get(camera_id) is not None
+        # yolo_median: always the calculated median (for display only)
+        yolo_median = state_manager._calculate_median(camera_id)
+        # adjusted_count: manual override if set, otherwise yolo_median (used for total)
+        adjusted_count = state_manager.get_median_count(camera_id)
+        has_override = state_manager.manual_overrides.get(camera_id) is not None
+
+        camera_status[camera_id]["yolo_median"] = yolo_median
+        camera_status[camera_id]["adjusted_count"] = adjusted_count
+        camera_status[camera_id]["has_override"] = has_override
 
     return {
         "system": state_manager.get_system_status(),

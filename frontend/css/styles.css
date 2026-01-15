@@ -243,6 +243,20 @@ body {
     color: #27ae60;
 }
 
+/* YOLO Median Display */
+.camera-yolo-median {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.yolo-median-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #9b59b6;
+}
+
 /* Median Count Controls */
 .camera-median-count {
     display: flex;
