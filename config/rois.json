@@ -41,14 +41,76 @@
       "notes": "ROI updated via UI at 2026-01-15T09:17:59.849Z"
     },
     "cam_002": {
-      "enabled": false,
-      "polygons": [],
-      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+      "enabled": true,
+      "polygons": [
+        {
+          "name": "ROI_1",
+          "points": [
+            [
+              332,
+              113
+            ],
+            [
+              361,
+              1044
+            ],
+            [
+              1201,
+              1029
+            ],
+            [
+              1957,
+              40
+            ],
+            [
+              384,
+              116
+            ],
+            [
+              384,
+              116
+            ]
+          ],
+          "description": "Counting zone 1"
+        }
+      ],
+      "notes": "ROI updated via UI at 2026-01-15T12:48:24.393Z"
     },
     "cam_003": {
-      "enabled": false,
-      "polygons": [],
-      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+      "enabled": true,
+      "polygons": [
+        {
+          "name": "ROI_1",
+          "points": [
+            [
+              999,
+              107
+            ],
+            [
+              2104,
+              46
+            ],
+            [
+              2108,
+              981
+            ],
+            [
+              1344,
+              846
+            ],
+            [
+              1020,
+              158
+            ],
+            [
+              1020,
+              158
+            ]
+          ],
+          "description": "Counting zone 1"
+        }
+      ],
+      "notes": "ROI updated via UI at 2026-01-15T12:48:35.074Z"
     },
     "cam_004": {
       "enabled": false,

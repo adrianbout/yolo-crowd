@@ -11,9 +11,17 @@
         <!-- Header -->
         <header class="header">
             <h1>SmartChairCounter Dashboard</h1>
-            <div class="status-indicator">
-                <span class="status-dot" id="connectionStatus"></span>
-                <span id="connectionText">Connecting...</span>
+            <div class="header-right">
+                <div class="status-indicator">
+                    <span class="status-dot" id="connectionStatus"></span>
+                    <span id="connectionText">Connecting...</span>
+                </div>
+                <button class="btn-settings" onclick="openSettings()" title="Settings">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                </button>
             </div>
         </header>
 
@@ -74,11 +82,129 @@
                 </div>
             </div>
         </div>
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal">
+            <div class="modal-content settings-modal">
+                <div class="modal-header">
+                    <h2>Detection Settings</h2>
+                    <span class="close" onclick="closeSettings()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Performance Settings</h3>
+                        <p class="settings-description">Adjust these to balance speed vs accuracy</p>
+
+                        <div class="setting-item">
+                            <label for="imgSize">Image Size</label>
+                            <div class="setting-control">
+                                <input type="range" id="imgSize" min="320" max="1280" step="32" value="608">
+                                <span class="setting-value" id="imgSizeValue">608</span>
+                            </div>
+                            <p class="setting-hint">Lower = faster, Higher = more accurate. Requires restart.</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="inferenceInterval">Inference Interval (seconds)</label>
+                            <div class="setting-control">
+                                <input type="range" id="inferenceInterval" min="0" max="1" step="0.05" value="0.1">
+                                <span class="setting-value" id="inferenceIntervalValue">0.1s</span>
+                            </div>
+                            <p class="setting-hint">Time between detections. 0 = maximum speed, 0.1 = 10 FPS</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="halfPrecision">Half Precision (FP16)</label>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="halfPrecision" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="setting-value" id="halfPrecisionValue">Enabled</span>
+                            </div>
+                            <p class="setting-hint">Use FP16 for ~2x faster inference on GPU. Requires restart.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Detection Thresholds</h3>
+                        <p class="settings-description">Fine-tune detection sensitivity</p>
+
+                        <div class="setting-item">
+                            <label for="confidenceThreshold">Confidence Threshold</label>
+                            <div class="setting-control">
+                                <input type="range" id="confidenceThreshold" min="0.1" max="0.9" step="0.05" value="0.25">
+                                <span class="setting-value" id="confidenceThresholdValue">0.25</span>
+                            </div>
+                            <p class="setting-hint">Minimum confidence to count as detection. Lower = more detections.</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="iouThreshold">IOU Threshold (NMS)</label>
+                            <div class="setting-control">
+                                <input type="range" id="iouThreshold" min="0.1" max="0.9" step="0.05" value="0.45">
+                                <span class="setting-value" id="iouThresholdValue">0.45</span>
+                            </div>
+                            <p class="setting-hint">Overlap threshold for removing duplicate boxes.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Preprocessing</h3>
+                        <p class="settings-description">Image enhancements before detection (can be slow)</p>
+
+                        <div class="setting-item">
+                            <label for="denoise">Denoise</label>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="denoise">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="setting-value setting-warning" id="denoiseValue">Disabled</span>
+                            </div>
+                            <p class="setting-hint warning">Very slow (100-500ms/frame). Only use for noisy cameras.</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="clahe">CLAHE (Contrast Enhancement)</label>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="clahe">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="setting-value" id="claheValue">Disabled</span>
+                            </div>
+                            <p class="setting-hint">Adaptive histogram equalization. Good for low contrast.</p>
+                        </div>
+
+                        <div class="setting-item">
+                            <label for="equalizeHistogram">Histogram Equalization</label>
+                            <div class="setting-control">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="equalizeHistogram">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="setting-value" id="equalizeHistogramValue">Disabled</span>
+                            </div>
+                            <p class="setting-hint">Basic contrast enhancement.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="btn btn-primary" onclick="applySettings()">Apply Live</button>
+                        <button class="btn btn-secondary" onclick="saveSettings()">Save & Restart Required</button>
+                        <button class="btn btn-danger" onclick="resetSettings()">Reset to Defaults</button>
+                    </div>
+
+                    <div class="settings-status" id="settingsStatus"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/camera-grid.js"></script>
     <script src="js/roi-editor.js"></script>
     <script src="js/websocket-client.js"></script>
+    <script src="js/settings.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

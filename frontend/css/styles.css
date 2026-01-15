@@ -35,10 +35,41 @@ body {
     color: #2c3e50;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
 .status-indicator {
     display: flex;
     align-items: center;
     gap: 10px;
+}
+
+/* Settings Button */
+.btn-settings {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #7f8c8d;
+}
+
+.btn-settings:hover {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    transform: rotate(45deg);
+}
+
+.btn-settings svg {
+    width: 24px;
+    height: 24px;
 }
 
 .status-dot {
@@ -455,6 +486,188 @@ body {
 }
 
 .roi-status.error {
+    display: block;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Settings Modal */
+.settings-modal {
+    max-width: 700px;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.settings-section:last-of-type {
+    border-bottom: none;
+}
+
+.settings-section h3 {
+    font-size: 18px;
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.settings-description {
+    font-size: 13px;
+    color: #95a5a6;
+    margin-bottom: 20px;
+}
+
+.setting-item {
+    margin-bottom: 20px;
+}
+
+.setting-item label {
+    display: block;
+    font-weight: 600;
+    color: #34495e;
+    margin-bottom: 8px;
+}
+
+.setting-control {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.setting-control input[type="range"] {
+    flex: 1;
+    height: 6px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: #ecf0f1;
+    border-radius: 3px;
+    outline: none;
+}
+
+.setting-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #3498db;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.setting-control input[type="range"]::-webkit-slider-thumb:hover {
+    background: #2980b9;
+}
+
+.setting-control input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: #3498db;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+}
+
+.setting-value {
+    min-width: 60px;
+    font-weight: 600;
+    color: #2c3e50;
+    text-align: right;
+}
+
+.setting-value.setting-warning {
+    color: #e74c3c;
+}
+
+.setting-hint {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-top: 5px;
+}
+
+.setting-hint.warning {
+    color: #e67e22;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #bdc3c7;
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #27ae60;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+
+/* Settings Actions */
+.settings-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.settings-status {
+    margin-top: 15px;
+    padding: 12px 15px;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+}
+
+.settings-status.info {
+    display: block;
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.settings-status.success {
+    display: block;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.settings-status.error {
     display: block;
     background-color: #f8d7da;
     color: #721c24;

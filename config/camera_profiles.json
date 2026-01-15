@@ -14,9 +14,9 @@
       },
       "preprocessing": {
         "normalize": true,
-        "equalize_histogram": false,
-        "denoise": true,
-        "clahe": false
+        "equalize_histogram": true,
+        "denoise": false,
+        "clahe": true
       },
       "stream_settings": {
         "fps_target": 10,
@@ -106,9 +106,9 @@
       },
       "preprocessing": {
         "normalize": false,
-        "equalize_histogram": false,
+        "equalize_histogram": true,
         "denoise": false,
-        "clahe": false
+        "clahe": true
       },
       "stream_settings": {
         "fps_target": 15,
@@ -152,9 +152,9 @@
       },
       "preprocessing": {
         "normalize": false,
-        "equalize_histogram": false,
+        "equalize_histogram": true,
         "denoise": false,
-        "clahe": false
+        "clahe": true
       },
       "stream_settings": {
         "fps_target": 10,
@@ -190,9 +190,11 @@
     "model_path": "weights/yolo-crowd.pt",
     "device": "cuda",
     "half_precision": true,
-    "class_filter": [0],
+    "class_filter": [
+      0
+    ],
     "confidence_threshold": 0.25,
     "iou_threshold": 0.45,
-    "img_size": 608
+    "img_size": 480
   }
 }

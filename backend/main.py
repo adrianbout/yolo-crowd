@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 
 from services.state_manager import StateManager
 from services.detection_service import DetectionService
-from api import cameras, roi, counting, websocket, dependencies
+from api import cameras, roi, counting, websocket, dependencies, settings
 
 # Configure logging
 logging.basicConfig(
@@ -110,6 +110,12 @@ app.include_router(
     websocket.router,
     prefix="/api",
     tags=["websocket"]
+)
+
+app.include_router(
+    settings.router,
+    prefix="/api",
+    tags=["settings"]
 )
 
 
