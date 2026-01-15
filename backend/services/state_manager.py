@@ -6,9 +6,11 @@ In-memory state management for counts, ROIs, and camera settings
 import json
 import logging
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import threading
+import statistics
+from collections import deque
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,13 @@ class StateManager:
         self.detection_history: Dict[str, List] = {}
         self.history_max_length = 100
 
+        # Count history for median calculation (last 10 seconds)
+        self.count_history: Dict[str, deque] = {}
+        self.median_window_seconds = 10
+
+        # Manual overrides for median counts (None = use calculated median)
+        self.manual_overrides: Dict[str, Optional[int]] = {}
+
     def load_configuration(self):
         """Load all configuration files"""
         logger.info("Loading configuration files...")
@@ -75,6 +84,8 @@ class StateManager:
             camera_id = camera["id"]
             self.counts[camera_id] = 0
             self.detection_history[camera_id] = []
+            self.count_history[camera_id] = deque()
+            self.manual_overrides[camera_id] = None
 
     def update_count(self, camera_id: str, count: int):
         """
@@ -87,8 +98,19 @@ class StateManager:
             self.counts[camera_id] = count
             self.last_update[camera_id] = datetime.now()
 
-            # Update total
-            self.total_count = sum(self.counts.values())
+            # Add to count history for median calculation
+            current_time = datetime.now()
+            if camera_id not in self.count_history:
+                self.count_history[camera_id] = deque()
+            self.count_history[camera_id].append((current_time, count))
+
+            # Remove old entries (older than median_window_seconds)
+            cutoff_time = current_time - timedelta(seconds=self.median_window_seconds)
+            while self.count_history[camera_id] and self.count_history[camera_id][0][0] < cutoff_time:
+                self.count_history[camera_id].popleft()
+
+            # Update total based on median counts
+            self.total_count = self._calculate_total_median()
             self.last_update_total = datetime.now()
 
     def update_counts_batch(self, counts: Dict[str, int]):
@@ -129,12 +151,12 @@ class StateManager:
 
     def get_total_count(self) -> int:
         """
-        Get total count across all cameras
+        Get total count across all cameras (sum of median counts)
         Returns:
             Total count
         """
         with self.lock:
-            return self.total_count
+            return self._calculate_total_median()
 
     def get_counts_summary(self) -> Dict:
         """
@@ -143,8 +165,10 @@ class StateManager:
             Summary dictionary with counts and timestamps
         """
         with self.lock:
+            # Always calculate total from median counts
+            total_median = self._calculate_total_median()
             return {
-                "total": self.total_count,
+                "total": total_median,
                 "by_camera": self.counts.copy(),
                 "last_update_total": self.last_update_total.isoformat() if self.last_update_total else None,
                 "last_update_by_camera": {
@@ -276,15 +300,86 @@ class StateManager:
         """
         return self.profiles.get("detection_settings", {})
 
+    def _calculate_median(self, camera_id: str) -> int:
+        """
+        Calculate median count for a camera from history
+        Args:
+            camera_id: Camera identifier
+        Returns:
+            Median count value
+        """
+        if camera_id not in self.count_history or not self.count_history[camera_id]:
+            return self.counts.get(camera_id, 0)
+
+        counts = [entry[1] for entry in self.count_history[camera_id]]
+        return int(statistics.median(counts))
+
+    def _calculate_total_median(self) -> int:
+        """
+        Calculate total count as sum of all median counts
+        Returns:
+            Total median count
+        """
+        total = 0
+        for camera_id in self.counts.keys():
+            total += self.get_median_count(camera_id)
+        return total
+
+    def get_median_count(self, camera_id: str) -> int:
+        """
+        Get median count for a camera (or manual override if set)
+        Args:
+            camera_id: Camera identifier
+        Returns:
+            Median count or manual override
+        """
+        # Return manual override if set
+        if camera_id in self.manual_overrides and self.manual_overrides[camera_id] is not None:
+            return self.manual_overrides[camera_id]
+
+        return self._calculate_median(camera_id)
+
+    def get_all_median_counts(self) -> Dict[str, int]:
+        """
+        Get median counts for all cameras
+        Returns:
+            Dictionary mapping camera_id to median count
+        """
+        with self.lock:
+            return {cam_id: self.get_median_count(cam_id) for cam_id in self.counts.keys()}
+
+    def set_manual_override(self, camera_id: str, count: int):
+        """
+        Set manual override for a camera's median count
+        Args:
+            camera_id: Camera identifier
+            count: Override value
+        """
+        with self.lock:
+            self.manual_overrides[camera_id] = count
+            self.total_count = self._calculate_total_median()
+            logger.info(f"Manual override set: Camera {camera_id} median count set to {count}")
+
+    def clear_manual_override(self, camera_id: str):
+        """
+        Clear manual override for a camera (return to calculated median)
+        Args:
+            camera_id: Camera identifier
+        """
+        with self.lock:
+            self.manual_overrides[camera_id] = None
+            self.total_count = self._calculate_total_median()
+            logger.info(f"Manual override cleared for camera {camera_id}")
+
     def manual_override_count(self, camera_id: str, count: int):
         """
-        Manual override for count (from API)
+        Manual override for count (from API) - now sets the median override
         Args:
             camera_id: Camera identifier
             count: New count value
         """
         logger.info(f"Manual override: Camera {camera_id} count set to {count}")
-        self.update_count(camera_id, count)
+        self.set_manual_override(camera_id, count)
 
     def reset_counts(self):
         """Reset all counts to zero"""
@@ -302,10 +397,12 @@ class StateManager:
             System status dictionary
         """
         with self.lock:
+            # Always calculate total from current median counts
+            total_median = self._calculate_total_median()
             return {
                 "total_cameras": len(self.cameras.get("cameras", [])),
                 "enabled_cameras": len([c for c in self.cameras.get("cameras", []) if c.get("enabled", True)]),
-                "total_count": self.total_count,
+                "total_count": total_median,
                 "last_update": self.last_update_total.isoformat() if self.last_update_total else None,
                 "cameras_with_roi": len([k for k, v in self.rois.get("rois", {}).items() if v.get("enabled", False)])
             }

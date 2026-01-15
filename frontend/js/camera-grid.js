@@ -10,6 +10,8 @@ class CameraGrid {
         this.container = document.getElementById(containerId);
         this.cameras = [];
         this.counts = {};
+        this.medianCounts = {};
+        this.hasOverride = {};
     }
 
     async loadCameras() {
@@ -54,8 +56,17 @@ class CameraGrid {
             </div>
             <div class="camera-info">
                 <div class="camera-count">
-                    <span class="count-label">Current Count:</span>
+                    <span class="count-label">YOLO Count:</span>
                     <span class="count-value" id="count-${camera.id}">0</span>
+                </div>
+                <div class="camera-median-count">
+                    <span class="count-label">Median Count:</span>
+                    <div class="median-controls">
+                        <button class="btn-adjust btn-minus" onclick="adjustMedianCount('${camera.id}', -1)">-</button>
+                        <span class="median-value" id="median-${camera.id}">0</span>
+                        <button class="btn-adjust btn-plus" onclick="adjustMedianCount('${camera.id}', 1)">+</button>
+                        <button class="btn-reset-override" id="reset-override-${camera.id}" onclick="clearOverride('${camera.id}')" style="display: none;" title="Clear manual override">&#x21ba;</button>
+                    </div>
                 </div>
                 <div class="camera-actions">
                     <button class="btn btn-primary btn-small" onclick="openROIEditor('${camera.id}', '${camera.name}')">
@@ -132,6 +143,35 @@ class CameraGrid {
         });
     }
 
+    updateMedianCount(cameraId, medianCount, hasOverride) {
+        const medianElement = document.getElementById(`median-${cameraId}`);
+        if (medianElement) {
+            medianElement.textContent = medianCount;
+            // Highlight if manual override is active
+            if (hasOverride) {
+                medianElement.classList.add('has-override');
+            } else {
+                medianElement.classList.remove('has-override');
+            }
+        }
+        this.medianCounts[cameraId] = medianCount;
+        this.hasOverride[cameraId] = hasOverride;
+
+        // Show/hide reset button
+        const resetBtn = document.getElementById(`reset-override-${cameraId}`);
+        if (resetBtn) {
+            resetBtn.style.display = hasOverride ? 'inline-block' : 'none';
+        }
+    }
+
+    updateMedianCounts(cameraData) {
+        Object.entries(cameraData).forEach(([cameraId, data]) => {
+            if (data.median_count !== undefined) {
+                this.updateMedianCount(cameraId, data.median_count, data.has_override || false);
+            }
+        });
+    }
+
     stopFeedUpdates() {
         if (this.feedUpdateInterval) {
             clearInterval(this.feedUpdateInterval);
@@ -161,5 +201,48 @@ async function viewCameraDetails(cameraId) {
     } catch (error) {
         console.error('Error fetching camera details:', error);
         alert('Failed to fetch camera details');
+    }
+}
+
+// Adjust median count manually
+async function adjustMedianCount(cameraId, delta) {
+    try {
+        // Get current median count
+        const currentCount = cameraGrid.medianCounts[cameraId] || 0;
+        const newCount = Math.max(0, currentCount + delta);
+
+        // Send override to API
+        const response = await fetch(`${API_BASE}/counting/${cameraId}/override`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ count: newCount })
+        });
+
+        if (!response.ok) throw new Error('Failed to update count');
+
+        // Update UI immediately
+        cameraGrid.updateMedianCount(cameraId, newCount, true);
+
+    } catch (error) {
+        console.error('Error adjusting median count:', error);
+    }
+}
+
+// Clear manual override
+async function clearOverride(cameraId) {
+    try {
+        const response = await fetch(`${API_BASE}/counting/${cameraId}/override`, {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) throw new Error('Failed to clear override');
+
+        const result = await response.json();
+        cameraGrid.updateMedianCount(cameraId, result.median_count, false);
+
+    } catch (error) {
+        console.error('Error clearing override:', error);
     }
 }

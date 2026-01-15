@@ -68,7 +68,7 @@ async function updateStatusHTTP() {
             uptimeElement.textContent = `Uptime: ${hours}h ${minutes}m`;
         }
 
-        // Update individual camera counts
+        // Update individual camera counts (YOLO raw counts)
         if (data.cameras && cameraGrid) {
             const countsByCamera = {};
             Object.entries(data.cameras).forEach(([cameraId, camData]) => {
@@ -77,6 +77,9 @@ async function updateStatusHTTP() {
                 }
             });
             cameraGrid.updateCounts(countsByCamera);
+
+            // Update median counts
+            cameraGrid.updateMedianCounts(data.cameras);
         }
 
     } catch (error) {

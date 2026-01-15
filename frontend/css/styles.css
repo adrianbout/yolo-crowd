@@ -243,6 +243,81 @@ body {
     color: #27ae60;
 }
 
+/* Median Count Controls */
+.camera-median-count {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+}
+
+.median-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-adjust {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-minus {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-minus:hover {
+    background-color: #c0392b;
+}
+
+.btn-plus {
+    background-color: #27ae60;
+    color: white;
+}
+
+.btn-plus:hover {
+    background-color: #1e8449;
+}
+
+.median-value {
+    font-size: 28px;
+    font-weight: bold;
+    color: #3498db;
+    min-width: 50px;
+    text-align: center;
+}
+
+.median-value.has-override {
+    color: #e67e22;
+}
+
+.btn-reset-override {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 50%;
+    background-color: #95a5a6;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-left: 5px;
+}
+
+.btn-reset-override:hover {
+    background-color: #7f8c8d;
+}
+
 .camera-actions {
     display: flex;
     gap: 10px;

@@ -190,6 +190,9 @@
     "model_path": "weights/yolo-crowd.pt",
     "device": "cuda",
     "half_precision": true,
-    "class_filter": [0]
+    "class_filter": [0],
+    "confidence_threshold": 0.25,
+    "iou_threshold": 0.45,
+    "img_size": 608
   }
 }

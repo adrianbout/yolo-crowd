@@ -137,10 +137,18 @@ async def health_check():
 @app.get("/api/status")
 async def get_system_status():
     """Get complete system status"""
+    camera_status = detection_service.camera_manager.get_all_status() if detection_service.camera_manager else {}
+
+    # Add median counts and override status to camera data
+    median_counts = state_manager.get_all_median_counts()
+    for camera_id in camera_status:
+        camera_status[camera_id]["median_count"] = median_counts.get(camera_id, 0)
+        camera_status[camera_id]["has_override"] = state_manager.manual_overrides.get(camera_id) is not None
+
     return {
         "system": state_manager.get_system_status(),
         "service": detection_service.get_statistics(),
-        "cameras": detection_service.camera_manager.get_all_status() if detection_service.camera_manager else {}
+        "cameras": camera_status
     }
 
 

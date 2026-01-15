@@ -1,9 +1,44 @@
 {
   "rois": {
     "cam_001": {
-      "enabled": false,
-      "polygons": [],
-      "notes": "No ROI defined yet - counts entire frame. Use UI to draw ROI polygons."
+      "enabled": true,
+      "polygons": [
+        {
+          "name": "ROI_1",
+          "points": [
+            [
+              465,
+              645
+            ],
+            [
+              518,
+              227
+            ],
+            [
+              1787,
+              189
+            ],
+            [
+              1886,
+              650
+            ],
+            [
+              853,
+              818
+            ],
+            [
+              497,
+              652
+            ],
+            [
+              499,
+              652
+            ]
+          ],
+          "description": "Counting zone 1"
+        }
+      ],
+      "notes": "ROI updated via UI at 2026-01-15T09:17:59.849Z"
     },
     "cam_002": {
       "enabled": false,
@@ -28,10 +63,22 @@
         {
           "name": "counting_zone_1",
           "points": [
-            [100, 100],
-            [500, 100],
-            [500, 400],
-            [100, 400]
+            [
+              100,
+              100
+            ],
+            [
+              500,
+              100
+            ],
+            [
+              500,
+              400
+            ],
+            [
+              100,
+              400
+            ]
           ],
           "description": "Main counting area - excludes overlap with adjacent camera"
         }

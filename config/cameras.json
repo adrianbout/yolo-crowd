@@ -2,7 +2,67 @@
   "cameras": [
     {
       "id": "cam_001",
-      "name": "Test Video 1",
+      "name": "Camera 1",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "test",
+        "rtsp_url": "v.mp4",
+        "isapi_base": "http://localhost/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video file",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_002",
+      "name": "Camera 2",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "test",
+        "rtsp_url": "v.mp4",
+        "isapi_base": "http://localhost/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video file",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_003",
+      "name": "Camera 3",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "test",
+        "rtsp_url": "v.mp4",
+        "isapi_base": "http://localhost/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video file",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_004",
+      "name": "Camera 4",
       "type": "rgb",
       "enabled": true,
       "connection": {
