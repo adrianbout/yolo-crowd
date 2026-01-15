@@ -3,9 +3,10 @@ ROI API Endpoints
 Manage ROI polygons for cameras
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict
 from pydantic import BaseModel
+from .dependencies import get_state_manager, get_detection_service
 
 router = APIRouter()
 
@@ -25,13 +26,13 @@ class ROIUpdate(BaseModel):
 
 
 @router.get("/roi")
-async def get_all_rois(state_manager) -> Dict:
+async def get_all_rois(state_manager = Depends(get_state_manager)) -> Dict:
     """Get all ROI configurations"""
     return state_manager.get_all_rois()
 
 
 @router.get("/roi/{camera_id}")
-async def get_camera_roi(camera_id: str, state_manager) -> Dict:
+async def get_camera_roi(camera_id: str, state_manager = Depends(get_state_manager)) -> Dict:
     """Get ROI configuration for a camera"""
     roi = state_manager.get_roi(camera_id)
     if not roi:
@@ -44,7 +45,7 @@ async def get_camera_roi(camera_id: str, state_manager) -> Dict:
 
 
 @router.put("/roi/{camera_id}")
-async def update_camera_roi(camera_id: str, roi_update: ROIUpdate, detection_service) -> Dict:
+async def update_camera_roi(camera_id: str, roi_update: ROIUpdate, detection_service = Depends(get_detection_service)) -> Dict:
     """Update ROI configuration for a camera"""
     roi_config = {
         "enabled": roi_update.enabled,
@@ -58,7 +59,7 @@ async def update_camera_roi(camera_id: str, roi_update: ROIUpdate, detection_ser
 
 
 @router.delete("/roi/{camera_id}")
-async def clear_camera_roi(camera_id: str, detection_service) -> Dict:
+async def clear_camera_roi(camera_id: str, detection_service = Depends(get_detection_service)) -> Dict:
     """Clear ROI configuration for a camera"""
     roi_config = {
         "enabled": False,
