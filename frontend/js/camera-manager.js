@@ -99,10 +99,12 @@ function renderCameraList() {
                 <div class="camera-item-name">
                     <span class="camera-type-badge ${camera.type}">${camera.type.toUpperCase()}</span>
                     ${camera.name}
+                    ${camera.detection_settings ? '<span class="camera-custom-badge" title="Custom detection settings">Custom</span>' : ''}
                 </div>
                 <div class="camera-item-details">
                     <span class="camera-id">${camera.id}</span>
                     <span class="camera-url">${camera.connection.rtsp_url}</span>
+                    ${camera.detection_settings ? `<span class="camera-settings-summary">conf: ${camera.detection_settings.confidence_threshold}, img: ${camera.detection_settings.img_size}</span>` : ''}
                 </div>
             </div>
             <div class="camera-item-actions">
@@ -193,6 +195,21 @@ function editCamera(cameraId) {
     document.getElementById('rtspUrl').value = rtspUrl;
     document.getElementById('cameraDescription').value = camera.position?.description || '';
 
+    // Load detection settings if they exist
+    if (camera.detection_settings) {
+        document.getElementById('cameraUseCustomSettings').checked = true;
+        document.getElementById('cameraDetectionSettings').style.display = 'block';
+        document.getElementById('cameraConfidence').value = camera.detection_settings.confidence_threshold || 0.25;
+        document.getElementById('cameraConfidenceValue').textContent = camera.detection_settings.confidence_threshold || 0.25;
+        document.getElementById('cameraIou').value = camera.detection_settings.iou_threshold || 0.45;
+        document.getElementById('cameraIouValue').textContent = camera.detection_settings.iou_threshold || 0.45;
+        document.getElementById('cameraImgSize').value = camera.detection_settings.img_size || 640;
+        document.getElementById('cameraPreprocessing').value = camera.detection_settings.preprocessing || 'none';
+    } else {
+        document.getElementById('cameraUseCustomSettings').checked = false;
+        document.getElementById('cameraDetectionSettings').style.display = 'none';
+    }
+
     onConnectionTypeChange();
 
     // Show form, hide list
@@ -220,8 +237,37 @@ function resetCameraForm() {
     document.getElementById('rtspUrl').value = '';
     document.getElementById('cameraDescription').value = '';
 
+    // Reset detection settings
+    document.getElementById('cameraUseCustomSettings').checked = false;
+    document.getElementById('cameraDetectionSettings').style.display = 'none';
+    document.getElementById('cameraConfidence').value = 0.25;
+    document.getElementById('cameraConfidenceValue').textContent = '0.25';
+    document.getElementById('cameraIou').value = 0.45;
+    document.getElementById('cameraIouValue').textContent = '0.45';
+    document.getElementById('cameraImgSize').value = '640';
+    document.getElementById('cameraPreprocessing').value = 'none';
+
     onConnectionTypeChange();
     hideCameraFormStatus();
+}
+
+/**
+ * Toggle custom detection settings visibility
+ */
+function onCustomSettingsToggle() {
+    const useCustom = document.getElementById('cameraUseCustomSettings').checked;
+    document.getElementById('cameraDetectionSettings').style.display = useCustom ? 'block' : 'none';
+}
+
+/**
+ * Update camera setting value display
+ */
+function updateCameraSettingValue(inputId) {
+    const input = document.getElementById(inputId);
+    const valueSpan = document.getElementById(inputId + 'Value');
+    if (input && valueSpan) {
+        valueSpan.textContent = input.value;
+    }
 }
 
 /**
@@ -358,6 +404,18 @@ async function saveCamera() {
             floor: 1
         }
     };
+
+    // Add detection settings if custom settings are enabled
+    if (document.getElementById('cameraUseCustomSettings').checked) {
+        cameraData.detection_settings = {
+            confidence_threshold: parseFloat(document.getElementById('cameraConfidence').value),
+            iou_threshold: parseFloat(document.getElementById('cameraIou').value),
+            img_size: parseInt(document.getElementById('cameraImgSize').value),
+            preprocessing: document.getElementById('cameraPreprocessing').value
+        };
+    } else {
+        cameraData.detection_settings = null;
+    }
 
     // Validation
     if (!cameraData.name) {

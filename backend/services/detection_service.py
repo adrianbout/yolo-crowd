@@ -146,8 +146,31 @@ class DetectionService:
                 preprocessing_configs = []
 
                 for camera_id in camera_ids:
+                    # Get camera config to check for per-camera overrides
+                    camera_config = self.state_manager.get_camera_config(camera_id)
+                    camera_detection_settings = camera_config.get("detection_settings") if camera_config else None
+
+                    # Get profile as base settings
                     profile = self.state_manager.get_camera_profile(camera_id)
-                    if profile:
+
+                    if camera_detection_settings:
+                        # Use per-camera detection settings override
+                        inference_config = {
+                            "confidence_threshold": camera_detection_settings.get("confidence_threshold", 0.25),
+                            "iou_threshold": camera_detection_settings.get("iou_threshold", 0.45),
+                            "img_size": camera_detection_settings.get("img_size", 640)
+                        }
+                        # Build preprocessing config from per-camera settings
+                        preprocessing_mode = camera_detection_settings.get("preprocessing", "none")
+                        preprocessing_config = {
+                            "use_preprocessing": preprocessing_mode != "none",
+                            "clahe": preprocessing_mode == "clahe",
+                            "equalize_histogram": preprocessing_mode == "equalize",
+                            "denoise": preprocessing_mode == "denoise"
+                        }
+                        inference_configs.append(inference_config)
+                        preprocessing_configs.append(preprocessing_config)
+                    elif profile:
                         inference_configs.append(profile.get("inference_settings", {}))
                         preprocessing_configs.append(profile.get("preprocessing", {}))
                     else:

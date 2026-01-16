@@ -38,6 +38,12 @@
       "position": {
         "description": "Thermal Camera",
         "floor": 1
+      },
+      "detection_settings": {
+        "confidence_threshold": 0.75,
+        "iou_threshold": 0.45,
+        "img_size": 320,
+        "preprocessing": "none"
       }
     },
     {
@@ -49,7 +55,7 @@
         "ip": "localhost",
         "rtsp_port": 554,
         "http_port": 80,
-        "username": "admin",
+        "username": "",
         "password": "",
         "rtsp_url": "v3.mp4",
         "isapi_base": ""
@@ -58,6 +64,12 @@
       "position": {
         "description": "Video file v3.mp4",
         "floor": 1
+      },
+      "detection_settings": {
+        "confidence_threshold": 0.85,
+        "iou_threshold": 0.45,
+        "img_size": 320,
+        "preprocessing": "none"
       }
     },
     {
@@ -66,11 +78,11 @@
       "type": "rgb",
       "enabled": true,
       "connection": {
-        "ip": "localhost",
+        "ip": "192.168.1.64",
         "rtsp_port": 554,
         "http_port": 80,
         "username": "admin",
-        "password": "",
+        "password": "1Jack$%^",
         "rtsp_url": "v4.mp4",
         "isapi_base": ""
       },
@@ -78,6 +90,12 @@
       "position": {
         "description": "Video file v4.mp4",
         "floor": 1
+      },
+      "detection_settings": {
+        "confidence_threshold": 0.1,
+        "iou_threshold": 0.45,
+        "img_size": 480,
+        "preprocessing": "none"
       }
     }
   ],

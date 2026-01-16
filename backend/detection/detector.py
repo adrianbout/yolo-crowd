@@ -296,14 +296,19 @@ class YOLODetector:
                 # Torch.hub YOLOv5: has .xyxy attribute
                 pred = results.xyxy if hasattr(results, 'xyxy') else results
 
-        # Apply NMS if using custom YOLOv5
+        # Apply NMS per-camera with individual thresholds
+        # Note: For batch efficiency, we apply NMS with the lowest thresholds first,
+        # then filter per-camera. This ensures we don't miss detections.
         if isinstance(results, tuple):
-            # Import NMS from custom YOLOv5
             if CUSTOM_YOLO_AVAILABLE:
+                # Find minimum thresholds across all cameras for initial NMS
+                min_conf = min(cfg.get("confidence_threshold", self.confidence_threshold) for cfg in inference_configs)
+                min_iou = min(cfg.get("iou_threshold", self.iou_threshold) for cfg in inference_configs)
+
                 pred = non_max_suppression(
                     pred,
-                    conf_thres=self.confidence_threshold,
-                    iou_thres=self.iou_threshold
+                    conf_thres=min_conf,
+                    iou_thres=min_iou
                 )
 
         # Parse results
@@ -313,7 +318,8 @@ class YOLODetector:
         img_shape = img_batch.shape[2:]  # [H, W]
 
         for idx, (camera_id, inference_config) in enumerate(zip(camera_ids, inference_configs)):
-            conf_thresh = inference_config.get("confidence_threshold", 0.5)
+            conf_thresh = inference_config.get("confidence_threshold", self.confidence_threshold)
+            iou_thresh = inference_config.get("iou_threshold", self.iou_threshold)
 
             # Get detections for this frame
             detections = []

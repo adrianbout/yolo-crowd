@@ -16,5 +16,11 @@ else
     echo "Warning: .venv not found, using system Python"
 fi
 
+# Print frontend URL
+echo ""
+echo "Frontend available at:"
+echo "  http://localhost:8000/frontend/index.html"
+echo ""
+
 echo "Starting Backend Server..."
 python main.py

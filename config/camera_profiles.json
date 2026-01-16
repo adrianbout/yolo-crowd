@@ -193,7 +193,7 @@
     "class_filter": [
       0
     ],
-    "confidence_threshold": 0.2,
+    "confidence_threshold": 0.75,
     "iou_threshold": 0.45,
     "img_size": 1280
   }

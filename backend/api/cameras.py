@@ -39,6 +39,14 @@ class CameraPosition(BaseModel):
     floor: int = 1
 
 
+class CameraDetectionSettings(BaseModel):
+    """Per-camera detection settings override"""
+    confidence_threshold: float = 0.25
+    iou_threshold: float = 0.45
+    img_size: int = 640
+    preprocessing: str = "none"  # none, clahe, equalize, denoise
+
+
 class CameraCreate(BaseModel):
     """Model for creating a new camera"""
     name: str
@@ -47,6 +55,7 @@ class CameraCreate(BaseModel):
     connection: CameraConnection
     profile: Optional[str] = None  # Will be auto-set based on type if not provided
     position: CameraPosition = CameraPosition()
+    detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
 
 
 class CameraUpdate(BaseModel):
@@ -57,6 +66,7 @@ class CameraUpdate(BaseModel):
     connection: Optional[CameraConnection] = None
     profile: Optional[str] = None
     position: Optional[CameraPosition] = None
+    detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
 
 
 @router.get("/cameras")
@@ -148,7 +158,8 @@ async def create_camera(
         "enabled": camera.enabled,
         "connection": camera.connection.dict(),
         "profile": profile,
-        "position": camera.position.dict()
+        "position": camera.position.dict(),
+        "detection_settings": camera.detection_settings.dict() if camera.detection_settings else None
     }
 
     # Add to cameras list
@@ -198,6 +209,9 @@ async def update_camera(
         existing["profile"] = camera.profile
     if camera.position is not None:
         existing["position"] = camera.position.dict()
+    # Handle detection_settings - can be set to None to remove custom settings
+    if "detection_settings" in camera.__fields_set__:
+        existing["detection_settings"] = camera.detection_settings.dict() if camera.detection_settings else None
 
     # Save to file
     _save_cameras_config(state_manager)

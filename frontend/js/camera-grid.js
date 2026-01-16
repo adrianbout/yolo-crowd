@@ -77,8 +77,8 @@ class CameraGrid {
                     <button class="btn btn-primary btn-small" onclick="openROIEditor('${camera.id}', '${camera.name}')">
                         Edit ROI
                     </button>
-                    <button class="btn btn-secondary btn-small" onclick="viewCameraDetails('${camera.id}')">
-                        Details
+                    <button class="btn btn-secondary btn-small" onclick="editCameraFromGrid('${camera.id}')">
+                        Edit
                     </button>
                 </div>
             </div>
@@ -268,4 +268,21 @@ async function clearOverride(cameraId) {
     } catch (error) {
         console.error('Error clearing override:', error);
     }
+}
+
+// Edit camera directly from grid (opens camera manager in edit mode)
+async function editCameraFromGrid(cameraId) {
+    // Open camera manager modal
+    const modal = document.getElementById('cameraManagerModal');
+    modal.classList.add('show');
+
+    // Load cameras and profiles first
+    await loadCameras();
+    await loadProfiles();
+
+    // Hide list, directly go to edit form
+    document.querySelector('.camera-list-section').style.display = 'none';
+
+    // Call editCamera to populate the form
+    editCamera(cameraId);
 }
