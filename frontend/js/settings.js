@@ -75,11 +75,9 @@ async function loadSettings() {
  * Update UI controls from current settings
  */
 function updateUIFromSettings() {
-    // Image size
+    // Image size (dropdown)
     const imgSizeInput = document.getElementById('imgSize');
-    const imgSizeValue = document.getElementById('imgSizeValue');
     imgSizeInput.value = currentSettings.img_size;
-    imgSizeValue.textContent = currentSettings.img_size;
 
     // Inference interval
     const inferenceInput = document.getElementById('inferenceInterval');
@@ -242,14 +240,6 @@ function hideSettingsStatus() {
 
 // Initialize settings event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Image size slider
-    const imgSizeInput = document.getElementById('imgSize');
-    if (imgSizeInput) {
-        imgSizeInput.addEventListener('input', (e) => {
-            document.getElementById('imgSizeValue').textContent = e.target.value;
-        });
-    }
-
     // Inference interval slider
     const inferenceInput = document.getElementById('inferenceInterval');
     if (inferenceInput) {

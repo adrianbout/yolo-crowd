@@ -49,6 +49,7 @@
             <button class="btn btn-primary" onclick="refreshData()">Refresh</button>
             <button class="btn btn-secondary" onclick="toggleROIMode()">Edit ROIs</button>
             <button class="btn btn-warning" onclick="resetCounts()">Reset Counts</button>
+            <button class="btn btn-success" onclick="openCameraManager()">Manage Cameras</button>
         </div>
 
         <!-- Camera Grid -->
@@ -97,8 +98,18 @@
                         <div class="setting-item">
                             <label for="imgSize">Image Size</label>
                             <div class="setting-control">
-                                <input type="range" id="imgSize" min="320" max="1280" step="32" value="608">
-                                <span class="setting-value" id="imgSizeValue">608</span>
+                                <select id="imgSize">
+                                    <option value="320">320 (Fastest)</option>
+                                    <option value="416">416</option>
+                                    <option value="480">480</option>
+                                    <option value="512">512</option>
+                                    <option value="608">608</option>
+                                    <option value="640" selected>640 (Default)</option>
+                                    <option value="736">736</option>
+                                    <option value="832">832</option>
+                                    <option value="960">960</option>
+                                    <option value="1280">1280 (Best accuracy)</option>
+                                </select>
                             </div>
                             <p class="setting-hint">Lower = faster, Higher = more accurate. Requires restart.</p>
                         </div>
@@ -199,12 +210,155 @@
                 </div>
             </div>
         </div>
+
+        <!-- Camera Manager Modal -->
+        <div id="cameraManagerModal" class="modal">
+            <div class="modal-content camera-manager-modal">
+                <div class="modal-header">
+                    <h2>Camera Manager</h2>
+                    <span class="close" onclick="closeCameraManager()">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <!-- Camera List -->
+                    <div class="camera-list-section">
+                        <div class="section-header">
+                            <h3>Cameras</h3>
+                            <button class="btn btn-success btn-small" onclick="showAddCameraForm()">+ Add Camera</button>
+                        </div>
+                        <div class="camera-list" id="cameraList">
+                            <!-- Camera items will be loaded here -->
+                        </div>
+                    </div>
+
+                    <!-- Add/Edit Camera Form -->
+                    <div class="camera-form-section" id="cameraFormSection" style="display: none;">
+                        <h3 id="cameraFormTitle">Add New Camera</h3>
+
+                        <input type="hidden" id="editCameraId">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cameraName">Camera Name</label>
+                                <input type="text" id="cameraName" placeholder="e.g., Lobby Camera">
+                            </div>
+                            <div class="form-group">
+                                <label for="cameraType">Camera Type</label>
+                                <select id="cameraType" onchange="onCameraTypeChange()">
+                                    <option value="rgb">RGB (Normal)</option>
+                                    <option value="thermal">Thermal</option>
+                                    <option value="infrared">Infrared</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cameraEnabled">Status</label>
+                                <select id="cameraEnabled">
+                                    <option value="true">Enabled</option>
+                                    <option value="false">Disabled</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="cameraProfile">Profile</label>
+                                <select id="cameraProfile">
+                                    <option value="rgb_default">RGB Default</option>
+                                    <option value="thermal_default">Thermal Default</option>
+                                    <option value="infrared_default">Infrared Default</option>
+                                    <option value="high_quality">High Quality</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h4>Connection Settings</h4>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="connectionType">Connection Type</label>
+                                <select id="connectionType" onchange="onConnectionTypeChange()">
+                                    <option value="rtsp">RTSP Stream</option>
+                                    <option value="http">HTTP Stream</option>
+                                    <option value="file">Video File</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="rtspFields">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cameraIp">IP Address</label>
+                                    <input type="text" id="cameraIp" placeholder="192.168.1.100">
+                                </div>
+                                <div class="form-group">
+                                    <label for="rtspPort">RTSP Port</label>
+                                    <input type="number" id="rtspPort" value="554">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cameraUsername">Username</label>
+                                    <input type="text" id="cameraUsername" placeholder="admin">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cameraPassword">Password</label>
+                                    <input type="password" id="cameraPassword" placeholder="password">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="streamType">Stream Type</label>
+                                    <select id="streamType" onchange="onStreamTypeChange()">
+                                        <option value="main">Main Stream (1080p/4K)</option>
+                                        <option value="sub" selected>Sub Stream (480p - Recommended)</option>
+                                        <option value="third">Third Stream (Low)</option>
+                                        <option value="custom">Custom Path</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="rtspPath">RTSP Path</label>
+                                    <input type="text" id="rtspPath" placeholder="/Streaming/Channels/102">
+                                </div>
+                            </div>
+                            <p class="form-hint">Sub-stream recommended for better performance. Main stream for higher quality.</p>
+                        </div>
+
+                        <div id="fileFields" style="display: none;">
+                            <div class="form-group full-width">
+                                <label for="videoFile">Video File Path</label>
+                                <input type="text" id="videoFile" placeholder="video.mp4">
+                                <p class="form-hint">Relative to project root or absolute path</p>
+                            </div>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="rtspUrl">Full RTSP/Stream URL (auto-generated)</label>
+                            <input type="text" id="rtspUrl" placeholder="rtsp://admin:pass@192.168.1.100:554/stream1">
+                            <p class="form-hint">You can also enter the full URL directly</p>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="cameraDescription">Description</label>
+                            <input type="text" id="cameraDescription" placeholder="Location or purpose">
+                        </div>
+
+                        <div class="form-actions">
+                            <button class="btn btn-primary" onclick="saveCamera()">Save Camera</button>
+                            <button class="btn btn-secondary" onclick="cancelCameraForm()">Cancel</button>
+                            <button class="btn btn-danger" id="deleteCameraBtn" onclick="deleteCamera()" style="display: none;">Delete</button>
+                        </div>
+
+                        <div class="camera-form-status" id="cameraFormStatus"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="js/camera-grid.js"></script>
     <script src="js/roi-editor.js"></script>
     <script src="js/websocket-client.js"></script>
     <script src="js/settings.js"></script>
+    <script src="js/camera-manager.js"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

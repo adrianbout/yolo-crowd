@@ -234,6 +234,15 @@ body {
     background-color: #27ae60;
 }
 
+.camera-resolution {
+    color: #7f8c8d;
+    font-size: 11px;
+    margin-left: 5px;
+    padding: 2px 6px;
+    background-color: #ecf0f1;
+    border-radius: 3px;
+}
+
 .camera-feed {
     width: 100%;
     height: 300px;
@@ -671,6 +680,219 @@ body {
     display: block;
     background-color: #f8d7da;
     color: #721c24;
+}
+
+/* Camera Manager Modal */
+.camera-manager-modal {
+    max-width: 800px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+/* Camera List */
+.camera-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.camera-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid #27ae60;
+    transition: all 0.2s;
+}
+
+.camera-list-item:hover {
+    background-color: #ecf0f1;
+}
+
+.camera-list-item.disabled {
+    border-left-color: #95a5a6;
+    opacity: 0.7;
+}
+
+.camera-item-info {
+    flex: 1;
+}
+
+.camera-item-name {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.camera-type-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.camera-type-badge.rgb {
+    background-color: #3498db;
+    color: white;
+}
+
+.camera-type-badge.thermal {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.camera-type-badge.infrared {
+    background-color: #9b59b6;
+    color: white;
+}
+
+.camera-item-details {
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.camera-id {
+    margin-right: 15px;
+}
+
+.camera-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.no-cameras {
+    text-align: center;
+    color: #95a5a6;
+    padding: 40px;
+    font-style: italic;
+}
+
+/* Camera Form */
+.camera-form-section {
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.camera-form-section h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.camera-form-section h4 {
+    margin: 20px 0 15px;
+    color: #34495e;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    flex: 1;
+}
+
+.form-group.full-width {
+    flex: none;
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #34495e;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #dce0e4;
+    border-radius: 5px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #95a5a6;
+    margin-top: 5px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.camera-form-status {
+    margin-top: 15px;
+    padding: 12px 15px;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 14px;
+    display: none;
+}
+
+.camera-form-status.info {
+    display: block;
+    background-color: #d1ecf1;
+    color: #0c5460;
+}
+
+.camera-form-status.success {
+    display: block;
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.camera-form-status.error {
+    display: block;
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Success button */
+.btn-success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #1e8449;
 }
 
 /* Loading */

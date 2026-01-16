@@ -6,6 +6,8 @@ Entry point for the backend server
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 import logging
 import asyncio
 from contextlib import asynccontextmanager
@@ -117,6 +119,12 @@ app.include_router(
     prefix="/api",
     tags=["settings"]
 )
+
+# Serve frontend static files
+frontend_path = Path(__file__).parent.parent / "frontend"
+if frontend_path.exists():
+    app.mount("/frontend", StaticFiles(directory=str(frontend_path), html=True), name="frontend")
+    logger.info(f"Serving frontend from {frontend_path}")
 
 
 # Root endpoint

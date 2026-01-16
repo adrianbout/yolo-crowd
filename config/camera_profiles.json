@@ -189,12 +189,12 @@
     "batch_size": 20,
     "model_path": "weights/yolo-crowd.pt",
     "device": "cuda",
-    "half_precision": true,
+    "half_precision": false,
     "class_filter": [
       0
     ],
-    "confidence_threshold": 0.25,
+    "confidence_threshold": 0.2,
     "iou_threshold": 0.45,
-    "img_size": 480
+    "img_size": 1280
   }
 }

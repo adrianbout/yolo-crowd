@@ -49,6 +49,7 @@ class CameraGrid {
                 <div class="camera-status">
                     <span class="camera-status-dot" id="status-${camera.id}"></span>
                     <span id="status-text-${camera.id}">Connecting...</span>
+                    <span class="camera-resolution" id="resolution-${camera.id}"></span>
                 </div>
             </div>
             <div class="camera-feed" id="feed-${camera.id}">
@@ -120,9 +121,10 @@ class CameraGrid {
         }
     }
 
-    updateCameraStatus(cameraId, connected) {
+    updateCameraStatus(cameraId, connected, resolution = null) {
         const statusDot = document.getElementById(`status-${cameraId}`);
         const statusText = document.getElementById(`status-text-${cameraId}`);
+        const resolutionText = document.getElementById(`resolution-${cameraId}`);
 
         if (statusDot) {
             statusDot.className = `camera-status-dot ${connected ? 'connected' : ''}`;
@@ -130,6 +132,10 @@ class CameraGrid {
 
         if (statusText) {
             statusText.textContent = connected ? 'Connected' : 'Disconnected';
+        }
+
+        if (resolutionText && resolution && resolution.width > 0) {
+            resolutionText.textContent = `${resolution.width}x${resolution.height}`;
         }
     }
 
@@ -213,7 +219,8 @@ async function viewCameraDetails(cameraId) {
         const statusResponse = await fetch(`${API_BASE}/cameras/${cameraId}/status`);
         const status = await statusResponse.json();
 
-        alert(`Camera Details:\n\nName: ${camera.name}\nType: ${camera.type}\nStatus: ${status.connected ? 'Connected' : 'Disconnected'}\nFPS: ${status.fps.toFixed(2)}`);
+        const resolution = status.resolution ? `${status.resolution.width}x${status.resolution.height}` : 'N/A';
+        alert(`Camera Details:\n\nName: ${camera.name}\nType: ${camera.type}\nStatus: ${status.connected ? 'Connected' : 'Disconnected'}\nResolution: ${resolution}\nFPS: ${status.fps.toFixed(2)}`);
     } catch (error) {
         console.error('Error fetching camera details:', error);
         alert('Failed to fetch camera details');

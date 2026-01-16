@@ -2,47 +2,47 @@
   "cameras": [
     {
       "id": "cam_001",
-      "name": "Camera 1",
+      "name": "Camera 1 - RGB",
       "type": "rgb",
       "enabled": true,
       "connection": {
-        "ip": "localhost",
+        "ip": "192.168.1.63",
         "rtsp_port": 554,
         "http_port": 80,
         "username": "admin",
-        "password": "test",
-        "rtsp_url": "v.mp4",
-        "isapi_base": "http://localhost/ISAPI"
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.1.63:554/Streaming/Channels/102",
+        "isapi_base": ""
       },
       "profile": "rgb_default",
       "position": {
-        "description": "Test video file",
+        "description": "RGB Camera",
         "floor": 1
       }
     },
     {
       "id": "cam_002",
-      "name": "Camera 2",
-      "type": "rgb",
+      "name": "Camera 2 - Thermal",
+      "type": "thermal",
       "enabled": true,
       "connection": {
-        "ip": "localhost",
+        "ip": "192.168.1.64",
         "rtsp_port": 554,
         "http_port": 80,
         "username": "admin",
-        "password": "test",
-        "rtsp_url": "v.mp4",
-        "isapi_base": "http://localhost/ISAPI"
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.1.64:554/Streaming/Channels/102",
+        "isapi_base": ""
       },
-      "profile": "rgb_default",
+      "profile": "thermal_default",
       "position": {
-        "description": "Test video file",
+        "description": "Thermal Camera",
         "floor": 1
       }
     },
     {
       "id": "cam_003",
-      "name": "Camera 3",
+      "name": "Camera 3 - Video",
       "type": "rgb",
       "enabled": true,
       "connection": {
@@ -50,19 +50,19 @@
         "rtsp_port": 554,
         "http_port": 80,
         "username": "admin",
-        "password": "test",
-        "rtsp_url": "v.mp4",
-        "isapi_base": "http://localhost/ISAPI"
+        "password": "",
+        "rtsp_url": "v3.mp4",
+        "isapi_base": ""
       },
       "profile": "rgb_default",
       "position": {
-        "description": "Test video file",
+        "description": "Video file v3.mp4",
         "floor": 1
       }
     },
     {
       "id": "cam_004",
-      "name": "Camera 4",
+      "name": "Camera 4 - Video",
       "type": "rgb",
       "enabled": true,
       "connection": {
@@ -70,21 +70,21 @@
         "rtsp_port": 554,
         "http_port": 80,
         "username": "admin",
-        "password": "test",
-        "rtsp_url": "v.mp4",
-        "isapi_base": "http://localhost/ISAPI"
+        "password": "",
+        "rtsp_url": "v4.mp4",
+        "isapi_base": ""
       },
       "profile": "rgb_default",
       "position": {
-        "description": "Test video file",
+        "description": "Video file v4.mp4",
         "floor": 1
       }
     }
   ],
   "global_settings": {
     "max_cameras": 20,
-    "reconnect_attempts": 1,
-    "reconnect_delay_seconds": 2,
+    "reconnect_attempts": 3,
+    "reconnect_delay_seconds": 5,
     "frame_skip": 0,
     "stream_buffer_size": 1,
     "use_hikvision_sdk": false

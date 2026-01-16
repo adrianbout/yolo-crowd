@@ -199,8 +199,9 @@ class YOLODetector:
             Preprocessed frame ready for model
         """
         # Use letterbox for proper aspect ratio (same as detect.py)
+        # auto=False ensures all frames have the exact same output size for batching
         if CUSTOM_YOLO_AVAILABLE:
-            img = letterbox(frame, self.img_size, stride=32)[0]
+            img = letterbox(frame, self.img_size, stride=32, auto=False)[0]
         else:
             img = cv2.resize(frame, (self.img_size, self.img_size))
 

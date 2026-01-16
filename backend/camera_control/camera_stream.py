@@ -5,12 +5,14 @@ Handles RTSP streams from multiple cameras with frame buffering
 
 import cv2
 import numpy as np
+import re
 from typing import Dict, Optional, Tuple, List
 import threading
 import logging
 import time
 from queue import Queue, Empty
 from dataclasses import dataclass
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,10 @@ class CameraStream:
         self.fps = 0.0
         self.last_fps_time = time.time()
 
+        # Resolution tracking
+        self.frame_width = 0
+        self.frame_height = 0
+
         # Detect if this is a video file (not an RTSP stream)
         self.is_video_file = not self.rtsp_url.lower().startswith(('rtsp://', 'http://', 'https://'))
 
@@ -102,7 +108,9 @@ class CameraStream:
             ret, frame = self.capture.read()
             if ret and frame is not None:
                 self.connected = True
-                logger.info(f"Successfully connected to camera {self.camera_id}")
+                # Capture resolution from first frame
+                self.frame_height, self.frame_width = frame.shape[:2]
+                logger.info(f"Successfully connected to camera {self.camera_id} ({self.frame_width}x{self.frame_height})")
                 return True
             else:
                 self.connected = False
@@ -196,6 +204,10 @@ class CameraStream:
     def get_fps(self) -> float:
         """Get current FPS"""
         return self.fps
+
+    def get_resolution(self) -> Tuple[int, int]:
+        """Get frame resolution (width, height)"""
+        return self.frame_width, self.frame_height
 
 
 class CameraStreamManager:
@@ -330,13 +342,16 @@ class CameraStreamManager:
             "name": info.name,
             "enabled": info.enabled,
             "connected": False,
-            "fps": 0.0
+            "fps": 0.0,
+            "resolution": {"width": 0, "height": 0}
         }
 
         if camera_id in self.streams:
             stream = self.streams[camera_id]
             status["connected"] = stream.is_connected()
             status["fps"] = stream.get_fps()
+            width, height = stream.get_resolution()
+            status["resolution"] = {"width": width, "height": height}
 
         return status
 
@@ -351,6 +366,46 @@ class CameraStreamManager:
             status[camera_id] = self.get_camera_status(camera_id)
         return status
 
+    def _build_rtsp_url(self, connection: Dict) -> str:
+        """
+        Build RTSP URL with properly encoded credentials
+        Args:
+            connection: Connection configuration dict
+        Returns:
+            RTSP URL with encoded credentials
+        """
+        rtsp_url = connection.get("rtsp_url", "")
+
+        # If it's not an RTSP URL (e.g., video file), return as-is
+        if not rtsp_url.lower().startswith("rtsp://"):
+            return rtsp_url
+
+        # Build URL from components if username/password provided
+        username = connection.get("username", "")
+        password = connection.get("password", "")
+        ip = connection.get("ip", "")
+        port = connection.get("rtsp_port", 554)
+
+        # Extract path from rtsp_url (everything after the host:port)
+        # e.g., rtsp://admin:pass@192.168.1.63:554/stream1 -> /stream1
+        path = "/stream1"  # default
+        if rtsp_url:
+            # Try to extract path from existing URL
+            match = re.search(r'rtsp://[^/]+(/.*)?$', rtsp_url)
+            if match and match.group(1):
+                path = match.group(1)
+
+        if username and password:
+            # URL-encode the password to handle special characters like $%^
+            encoded_password = quote(password, safe='')
+            encoded_username = quote(username, safe='')
+            return f"rtsp://{encoded_username}:{encoded_password}@{ip}:{port}{path}"
+        elif username:
+            encoded_username = quote(username, safe='')
+            return f"rtsp://{encoded_username}@{ip}:{port}{path}"
+        else:
+            return f"rtsp://{ip}:{port}{path}"
+
     def load_from_config(self, cameras_config: Dict):
         """
         Load cameras from configuration
@@ -364,10 +419,13 @@ class CameraStreamManager:
         reconnect_delay = global_settings.get("reconnect_delay_seconds", 5)
 
         for camera_data in cameras_config.get("cameras", []):
+            # Build RTSP URL with properly encoded credentials
+            rtsp_url = self._build_rtsp_url(camera_data["connection"])
+
             self.add_camera(
                 camera_id=camera_data["id"],
                 name=camera_data["name"],
-                rtsp_url=camera_data["connection"]["rtsp_url"],
+                rtsp_url=rtsp_url,
                 enabled=camera_data.get("enabled", True),
                 reconnect_attempts=reconnect_attempts,
                 reconnect_delay=reconnect_delay
