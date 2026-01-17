@@ -39,6 +39,7 @@ class DetectionService:
         self.state_manager = state_manager
         self.batch_size = batch_size
         self.inference_interval = inference_interval
+        self.frame_skip = 0  # Number of frames to skip between processing
 
         # Components
         self.camera_manager: Optional[CameraStreamManager] = None
@@ -49,6 +50,7 @@ class DetectionService:
         # Service state
         self.running = False
         self.detection_thread: Optional[threading.Thread] = None
+        self._frame_skip_counter = 0  # Internal counter for frame skipping
 
         # Statistics
         self.total_inferences = 0
@@ -82,7 +84,10 @@ class DetectionService:
         # Initialize ROI filter
         self.roi_filter.load_rois(self.state_manager.get_all_rois())
 
-        logger.info("Detection service initialized successfully")
+        # Load frame_skip setting
+        self.frame_skip = detection_settings.get("frame_skip", 0)
+
+        logger.info(f"Detection service initialized successfully (frame_skip={self.frame_skip})")
 
     def start(self):
         """Start the detection service"""
@@ -136,6 +141,14 @@ class DetectionService:
                     logger.debug("No frames available")
                     time.sleep(self.inference_interval)
                     continue
+
+                # Frame skip logic - skip processing if counter hasn't reached threshold
+                if self.frame_skip > 0:
+                    self._frame_skip_counter += 1
+                    if self._frame_skip_counter <= self.frame_skip:
+                        time.sleep(0.01)  # Small sleep to avoid busy-waiting
+                        continue
+                    self._frame_skip_counter = 0  # Reset counter after processing
 
                 # Prepare batch
                 camera_ids = list(frames_dict.keys())

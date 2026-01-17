@@ -298,7 +298,11 @@ class StateManager:
         Returns:
             Detection settings
         """
-        return self.profiles.get("detection_settings", {})
+        settings = self.profiles.get("detection_settings", {}).copy()
+        # Also include frame_skip from cameras.json global_settings
+        global_settings = self.cameras.get("global_settings", {})
+        settings["frame_skip"] = global_settings.get("frame_skip", 0)
+        return settings
 
     def _calculate_median(self, camera_id: str) -> int:
         """

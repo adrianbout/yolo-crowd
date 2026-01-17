@@ -28,6 +28,7 @@ class DetectionSettings(BaseModel):
     clahe: bool = Field(False, description="Apply CLAHE contrast enhancement")
     equalize_histogram: bool = Field(False, description="Apply histogram equalization")
     inference_interval: float = Field(0.1, ge=0.0, le=1.0, description="Seconds between inferences")
+    frame_skip: int = Field(0, ge=0, le=30, description="Number of frames to skip between processing")
 
 
 class SettingsResponse(BaseModel):
@@ -98,10 +99,18 @@ async def update_settings(
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=2)
 
+        # Also update frame_skip in cameras.json
+        cameras_path = state_manager.config_dir / "cameras.json"
+        with open(cameras_path, 'r') as f:
+            cameras_config = json.load(f)
+        cameras_config["global_settings"]["frame_skip"] = settings.frame_skip
+        with open(cameras_path, 'w') as f:
+            json.dump(cameras_config, f, indent=2)
+
         # Reload configuration in state manager
         state_manager.load_configuration()
 
-        logger.info(f"Settings updated: img_size={settings.img_size}, conf={settings.confidence_threshold}")
+        logger.info(f"Settings updated: img_size={settings.img_size}, conf={settings.confidence_threshold}, frame_skip={settings.frame_skip}")
 
         return {
             "status": "ok",
@@ -130,8 +139,9 @@ async def apply_settings_live(
             detection_service.detector.confidence_threshold = settings.confidence_threshold
             detection_service.detector.iou_threshold = settings.iou_threshold
 
-        # Update inference interval
+        # Update inference interval and frame skip
         detection_service.inference_interval = settings.inference_interval
+        detection_service.frame_skip = settings.frame_skip
 
         # Save to file as well
         await update_settings(settings, state_manager)
@@ -139,7 +149,7 @@ async def apply_settings_live(
         return {
             "status": "ok",
             "message": "Settings applied live",
-            "applied_live": ["confidence_threshold", "iou_threshold", "inference_interval"],
+            "applied_live": ["confidence_threshold", "iou_threshold", "inference_interval", "frame_skip"],
             "requires_restart": ["img_size", "half_precision", "denoise", "clahe", "equalize_histogram"]
         }
 
