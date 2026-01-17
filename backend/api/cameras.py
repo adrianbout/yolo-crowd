@@ -41,10 +41,17 @@ class CameraPosition(BaseModel):
 
 class CameraDetectionSettings(BaseModel):
     """Per-camera detection settings override"""
+    detection_model: str = "rgb"  # rgb, thermal, blob_hotspot
     confidence_threshold: float = 0.25
     iou_threshold: float = 0.45
     img_size: int = 640
     preprocessing: str = "none"  # none, clahe, equalize, denoise
+    # Blob hotspot settings (only used when detection_model="blob_hotspot")
+    blob_threshold: int = 200  # Brightness threshold (0-255)
+    blob_min_area: int = 2000  # Minimum blob area
+    blob_max_area: int = 50000  # Maximum blob area
+    blob_aspect_ratio_min: float = 0.5  # Min height/width ratio
+    blob_aspect_ratio_max: float = 3.0  # Max height/width ratio
 
 
 class CameraCreate(BaseModel):

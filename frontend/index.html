@@ -124,6 +124,15 @@
                         </div>
 
                         <div class="setting-item">
+                            <label for="frameSkip">Frame Skip</label>
+                            <div class="setting-control">
+                                <input type="range" id="frameSkip" min="0" max="30" step="1" value="0">
+                                <span class="setting-value" id="frameSkipValue">0</span>
+                            </div>
+                            <p class="setting-hint">Skip N frames between processing. Higher = slower preview. 0 = process every frame.</p>
+                        </div>
+
+                        <div class="setting-item">
                             <label for="halfPrecision">Half Precision (FP16)</label>
                             <div class="setting-control">
                                 <label class="toggle-switch">
@@ -339,6 +348,125 @@
                         <div class="form-group full-width">
                             <label for="cameraDescription">Description</label>
                             <input type="text" id="cameraDescription" placeholder="Location or purpose">
+                        </div>
+
+                        <h4>Detection Settings <span class="form-hint-inline">(per-camera overrides)</span></h4>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="cameraUseCustomSettings">
+                                    <input type="checkbox" id="cameraUseCustomSettings" onchange="onCustomSettingsToggle()">
+                                    Use Custom Detection Settings
+                                </label>
+                                <p class="form-hint">Override global settings for this camera</p>
+                            </div>
+                        </div>
+
+                        <div id="cameraDetectionSettings" class="camera-detection-settings" style="display: none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cameraDetectionModel">Detection Model</label>
+                                    <select id="cameraDetectionModel" onchange="onDetectionModelChange()">
+                                        <option value="rgb">RGB (Crowd Detection)</option>
+                                        <option value="thermal">Thermal (YOLO)</option>
+                                        <option value="blob_hotspot">Blob Hotspot (Thermal)</option>
+                                    </select>
+                                    <p class="form-hint">Select detection model for this camera</p>
+                                </div>
+                            </div>
+
+                            <!-- Blob Hotspot Settings (shown only when blob_hotspot is selected) -->
+                            <div id="blobHotspotSettings" style="display: none;">
+                                <h4 style="margin: 15px 0 10px; color: #ff9800;">Blob Hotspot Settings</h4>
+                                <p style="margin: 0 0 15px; color: #666; font-size: 12px;">
+                                    Detects people as bright hotspots in thermal images. Works best when people appear brighter than the background.
+                                </p>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="blobThreshold">Brightness Threshold</label>
+                                        <div class="setting-control-inline">
+                                            <input type="range" id="blobThreshold" min="100" max="255" step="5" value="200" oninput="updateCameraSettingValue('blobThreshold')">
+                                            <span class="setting-value-inline" id="blobThresholdValue">200</span>
+                                        </div>
+                                        <p class="form-hint">Pixels brighter than this value are considered "hot". Lower = more sensitive, Higher = only very bright spots. Try 180-220 for most thermal cameras.</p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blobMinArea">Min Blob Area (pixels)</label>
+                                        <div class="setting-control-inline">
+                                            <input type="range" id="blobMinArea" min="500" max="10000" step="100" value="2000" oninput="updateCameraSettingValue('blobMinArea')">
+                                            <span class="setting-value-inline" id="blobMinAreaValue">2000</span>
+                                        </div>
+                                        <p class="form-hint">Ignore blobs smaller than this. Filters out noise and small heat sources. Increase if detecting too many false positives.</p>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="blobMaxArea">Max Blob Area (pixels)</label>
+                                        <div class="setting-control-inline">
+                                            <input type="range" id="blobMaxArea" min="10000" max="100000" step="1000" value="50000" oninput="updateCameraSettingValue('blobMaxArea')">
+                                            <span class="setting-value-inline" id="blobMaxAreaValue">50000</span>
+                                        </div>
+                                        <p class="form-hint">Ignore blobs larger than this. Filters out large merged areas or background heat. Decrease if multiple people are being counted as one.</p>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blobAspectMin">Aspect Ratio (Height/Width)</label>
+                                        <div style="display: flex; gap: 10px; align-items: center;">
+                                            <input type="number" id="blobAspectMin" min="0.1" max="2" step="0.1" value="0.5" style="width: 60px;">
+                                            <span>to</span>
+                                            <input type="number" id="blobAspectMax" min="1" max="5" step="0.1" value="3.0" style="width: 60px;">
+                                        </div>
+                                        <p class="form-hint">Filter by shape. Standing person ~1.5-2.5, sitting ~0.8-1.5. Range 0.5-3.0 covers most poses. Narrow range = stricter person shape filtering.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cameraConfidence">Confidence Threshold</label>
+                                    <div class="setting-control-inline">
+                                        <input type="range" id="cameraConfidence" min="0.1" max="0.9" step="0.05" value="0.25" oninput="updateCameraSettingValue('cameraConfidence')">
+                                        <span class="setting-value-inline" id="cameraConfidenceValue">0.25</span>
+                                    </div>
+                                    <p class="form-hint">Min confidence for detection (lower = more detections)</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cameraIou">IOU Threshold</label>
+                                    <div class="setting-control-inline">
+                                        <input type="range" id="cameraIou" min="0.1" max="0.9" step="0.05" value="0.45" oninput="updateCameraSettingValue('cameraIou')">
+                                        <span class="setting-value-inline" id="cameraIouValue">0.45</span>
+                                    </div>
+                                    <p class="form-hint">Overlap threshold for duplicate removal</p>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="cameraImgSize">Image Size</label>
+                                    <select id="cameraImgSize">
+                                        <option value="320">320 (Fastest)</option>
+                                        <option value="416">416</option>
+                                        <option value="480">480</option>
+                                        <option value="512">512</option>
+                                        <option value="608">608</option>
+                                        <option value="640" selected>640 (Default)</option>
+                                        <option value="736">736</option>
+                                        <option value="832">832</option>
+                                        <option value="960">960</option>
+                                        <option value="1280">1280 (Best accuracy)</option>
+                                    </select>
+                                    <p class="form-hint">YOLO input size for this camera</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cameraPreprocessing">Preprocessing</label>
+                                    <select id="cameraPreprocessing">
+                                        <option value="none">None (Fastest)</option>
+                                        <option value="clahe">CLAHE (Contrast)</option>
+                                        <option value="equalize">Histogram Equalization</option>
+                                        <option value="denoise">Denoise (Slow)</option>
+                                    </select>
+                                    <p class="form-hint">Image enhancement before detection</p>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-actions">

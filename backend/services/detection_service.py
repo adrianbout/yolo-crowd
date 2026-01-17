@@ -14,6 +14,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 from detection.detector import YOLODetector, DetectionAggregator
+from detection.detector_factory import DetectorFactory
 from detection.roi_filter import ROIFilter
 from camera_control.camera_stream import CameraStreamManager
 from services.state_manager import StateManager
@@ -44,6 +45,7 @@ class DetectionService:
         # Components
         self.camera_manager: Optional[CameraStreamManager] = None
         self.detector: Optional[YOLODetector] = None
+        self.detector_factory: Optional[DetectorFactory] = None
         self.roi_filter: ROIFilter = ROIFilter()
         self.aggregator: DetectionAggregator = DetectionAggregator()
 
@@ -67,19 +69,29 @@ class DetectionService:
         self.camera_manager = CameraStreamManager(buffer_size=1)
         self.camera_manager.load_from_config(self.state_manager.cameras)
 
-        # Initialize YOLO detector
+        # Initialize detector factory with both RGB and thermal models
         detection_settings = self.state_manager.get_detection_settings()
         model_path = detection_settings.get("model_path", "weights/yolo-crowd.pt")
+        thermal_model_path = detection_settings.get("thermal_model_path", "weights/yolo-thermal-approche2.pt")
 
-        self.detector = YOLODetector(
-            model_path=model_path,
+        self.detector_factory = DetectorFactory(
+            rgb_model_path=model_path,
+            thermal_model_path=thermal_model_path,
             device=detection_settings.get("device", "cuda"),
             half_precision=detection_settings.get("half_precision", True),
-            class_filter=detection_settings.get("class_filter", None),
-            img_size=detection_settings.get("img_size", 608),
-            confidence_threshold=detection_settings.get("confidence_threshold", 0.25),
-            iou_threshold=detection_settings.get("iou_threshold", 0.45)
+            default_confidence=detection_settings.get("confidence_threshold", 0.25),
+            default_iou=detection_settings.get("iou_threshold", 0.45),
+            default_img_size=detection_settings.get("img_size", 608)
         )
+
+        # Register per-camera detection model with the factory
+        for camera in self.state_manager.cameras.get("cameras", []):
+            camera_detection_settings = camera.get("detection_settings", {})
+            detection_model = camera_detection_settings.get("detection_model", "rgb")
+            self.detector_factory.register_camera_model(camera["id"], detection_model)
+
+        # Keep reference to RGB detector for backward compatibility
+        self.detector = self.detector_factory.rgb_detector
 
         # Initialize ROI filter
         self.roi_filter.load_rois(self.state_manager.get_all_rois())
@@ -191,8 +203,8 @@ class DetectionService:
                         inference_configs.append({"confidence_threshold": 0.5, "iou_threshold": 0.45})
                         preprocessing_configs.append({})
 
-                # Run batched detection
-                detections_by_camera = self.detector.detect_batch(
+                # Run batched detection via detector factory (routes to appropriate detector)
+                detections_by_camera = self.detector_factory.detect_batch(
                     frames=frames,
                     camera_ids=camera_ids,
                     inference_configs=inference_configs,
