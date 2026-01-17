@@ -66,6 +66,8 @@ class CameraStream:
 
         # Detect if this is a video file (not an RTSP stream)
         self.is_video_file = not self.rtsp_url.lower().startswith(('rtsp://', 'http://', 'https://'))
+        self.video_fps = 30.0  # Native FPS for video files (will be updated on connect)
+        self.frame_delay = 0.0  # Delay between frames for real-time playback
 
     def start(self):
         """Start the camera stream"""
@@ -110,7 +112,16 @@ class CameraStream:
                 self.connected = True
                 # Capture resolution from first frame
                 self.frame_height, self.frame_width = frame.shape[:2]
-                logger.info(f"Successfully connected to camera {self.camera_id} ({self.frame_width}x{self.frame_height})")
+
+                # For video files, get native FPS for real-time playback
+                if self.is_video_file:
+                    self.video_fps = self.capture.get(cv2.CAP_PROP_FPS)
+                    if self.video_fps <= 0:
+                        self.video_fps = 30.0  # Default to 30 FPS if not available
+                    self.frame_delay = 1.0 / self.video_fps
+                    logger.info(f"Successfully connected to video file {self.camera_id} ({self.frame_width}x{self.frame_height}, {self.video_fps:.1f} FPS)")
+                else:
+                    logger.info(f"Successfully connected to camera {self.camera_id} ({self.frame_width}x{self.frame_height})")
                 return True
             else:
                 self.connected = False
@@ -180,6 +191,10 @@ class CameraStream:
                     self.fps = self.frame_count / elapsed
                     self.frame_count = 0
                     self.last_fps_time = current_time
+
+                # For video files, add delay to match real-time playback
+                if self.is_video_file and self.frame_delay > 0:
+                    time.sleep(self.frame_delay)
 
             except Exception as e:
                 logger.error(f"Camera {self.camera_id}: Error reading frame: {e}")
