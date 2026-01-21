@@ -14,7 +14,8 @@ const DEFAULT_SETTINGS = {
     denoise: false,
     clahe: false,
     equalize_histogram: false,
-    inference_interval: 0.1
+    inference_interval: 0.1,
+    frame_skip: 0
 };
 
 // Current settings cache
@@ -59,7 +60,8 @@ async function loadSettings() {
             denoise: data.preprocessing_defaults.denoise || false,
             clahe: data.preprocessing_defaults.clahe || false,
             equalize_histogram: data.preprocessing_defaults.equalize_histogram || false,
-            inference_interval: data.detection_settings.inference_interval || DEFAULT_SETTINGS.inference_interval
+            inference_interval: data.detection_settings.inference_interval || DEFAULT_SETTINGS.inference_interval,
+            frame_skip: data.detection_settings.frame_skip ?? DEFAULT_SETTINGS.frame_skip
         };
 
         updateUIFromSettings();
@@ -84,6 +86,12 @@ function updateUIFromSettings() {
     const inferenceValue = document.getElementById('inferenceIntervalValue');
     inferenceInput.value = currentSettings.inference_interval;
     inferenceValue.textContent = `${currentSettings.inference_interval}s`;
+
+    // Frame skip
+    const frameSkipInput = document.getElementById('frameSkip');
+    const frameSkipValue = document.getElementById('frameSkipValue');
+    frameSkipInput.value = currentSettings.frame_skip;
+    frameSkipValue.textContent = currentSettings.frame_skip;
 
     // Half precision
     const halfPrecisionInput = document.getElementById('halfPrecision');
@@ -139,7 +147,8 @@ function getSettingsFromUI() {
         denoise: document.getElementById('denoise').checked,
         clahe: document.getElementById('clahe').checked,
         equalize_histogram: document.getElementById('equalizeHistogram').checked,
-        inference_interval: parseFloat(document.getElementById('inferenceInterval').value)
+        inference_interval: parseFloat(document.getElementById('inferenceInterval').value),
+        frame_skip: parseInt(document.getElementById('frameSkip').value)
     };
 }
 
@@ -245,6 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inferenceInput) {
         inferenceInput.addEventListener('input', (e) => {
             document.getElementById('inferenceIntervalValue').textContent = `${e.target.value}s`;
+        });
+    }
+
+    // Frame skip slider
+    const frameSkipInput = document.getElementById('frameSkip');
+    if (frameSkipInput) {
+        frameSkipInput.addEventListener('input', (e) => {
+            document.getElementById('frameSkipValue').textContent = e.target.value;
         });
     }
 

@@ -188,6 +188,7 @@
   "detection_settings": {
     "batch_size": 20,
     "model_path": "weights/yolo-crowd.pt",
+    "thermal_model_path": "weights/yolo-thermal-approche2.pt",
     "device": "cuda",
     "half_precision": false,
     "class_filter": [
