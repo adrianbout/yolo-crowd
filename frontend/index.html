@@ -350,6 +350,12 @@
                             <input type="text" id="cameraDescription" placeholder="Location or purpose">
                         </div>
 
+                        <div class="form-group full-width">
+                            <label for="cameraTotalChairs">Total Chairs Available</label>
+                            <input type="number" id="cameraTotalChairs" min="0" value="0" placeholder="0">
+                            <p class="form-hint">Number of chairs/seats available in this camera's view. Empty chairs will be calculated as: max(0, Total Chairs - Detected People)</p>
+                        </div>
+
                         <h4>Detection Settings <span class="form-hint-inline">(per-camera overrides)</span></h4>
 
                         <div class="form-row">
@@ -486,7 +492,7 @@
     <script src="js/roi-editor.js"></script>
     <script src="js/websocket-client.js"></script>
     <script src="js/settings.js"></script>
-    <script src="js/camera-manager.js"></script>
+    <script src="js/camera-manager.js?v=20260121b"></script>
     <script src="js/main.js"></script>
 </body>
 </html>

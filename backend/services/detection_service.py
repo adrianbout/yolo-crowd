@@ -86,7 +86,7 @@ class DetectionService:
 
         # Register per-camera detection model with the factory
         for camera in self.state_manager.cameras.get("cameras", []):
-            camera_detection_settings = camera.get("detection_settings", {})
+            camera_detection_settings = camera.get("detection_settings") or {}
             detection_model = camera_detection_settings.get("detection_model", "rgb")
             self.detector_factory.register_camera_model(camera["id"], detection_model)
 

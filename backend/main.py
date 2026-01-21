@@ -23,6 +23,14 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Suppress verbose logs - set to INFO to see all logs, WARNING to suppress
+VERBOSE_LOGGING = False  # Set to True to see all inference and HTTP logs
+
+if not VERBOSE_LOGGING:
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)  # Suppress HTTP request logs
+    logging.getLogger("services.detection_service").setLevel(logging.WARNING)  # Suppress inference logs
+    logger.info("Verbose logging disabled (HTTP requests and inference logs suppressed)")
+
 # Global instances
 state_manager = StateManager(config_dir="config")
 detection_service = DetectionService(state_manager, batch_size=1, inference_interval=0.0)

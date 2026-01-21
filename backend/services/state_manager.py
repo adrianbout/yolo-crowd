@@ -167,9 +167,37 @@ class StateManager:
         with self.lock:
             # Always calculate total from median counts
             total_median = self._calculate_total_median()
+            
+            # Build detailed camera data including median counts and empty chairs
+            camera_data = {}
+            for cam_id in self.counts.keys():
+                # Get camera config for totalChairs
+                camera_config = self.get_camera_config(cam_id)
+                total_chairs = camera_config.get('totalChairs', 0) if camera_config else 0
+                
+                # Get median count (or manual override)
+                median_count = self.get_median_count(cam_id)
+                has_override = cam_id in self.manual_overrides and self.manual_overrides[cam_id] is not None
+                
+                # Calculate YOLO median (always the calculated value, ignoring overrides)
+                yolo_median = self._calculate_median(cam_id)
+                
+                # Calculate empty chairs
+                empty_chairs = max(0, total_chairs - median_count) if total_chairs > 0 else None
+                
+                camera_data[cam_id] = {
+                    "count": self.counts[cam_id],  # Current YOLO count
+                    "yolo_median": yolo_median,  # Calculated median from YOLO
+                    "adjusted_count": median_count,  # Median or manual override
+                    "has_override": has_override,
+                    "total_chairs": total_chairs,
+                    "empty_chairs": empty_chairs
+                }
+            
             return {
                 "total": total_median,
-                "by_camera": self.counts.copy(),
+                "by_camera": self.counts.copy(),  # Keep for backward compatibility
+                "camera_data": camera_data,  # New detailed data structure
                 "last_update_total": self.last_update_total.isoformat() if self.last_update_total else None,
                 "last_update_by_camera": {
                     cam_id: ts.isoformat() for cam_id, ts in self.last_update.items()

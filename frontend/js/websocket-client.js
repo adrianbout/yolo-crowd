@@ -106,9 +106,14 @@ class WebSocketClient {
             lastUpdateElement.textContent = `Last updated: ${date.toLocaleTimeString()}`;
         }
 
-        // Update individual camera counts
+        // Update individual camera counts (backward compatibility)
         if (data.by_camera && cameraGrid) {
             cameraGrid.updateCounts(data.by_camera);
+        }
+
+        // Update detailed camera data (median counts, empty chairs, etc.)
+        if (data.camera_data && cameraGrid) {
+            cameraGrid.updateMedianCounts(data.camera_data);
         }
     }
 

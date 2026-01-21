@@ -20,6 +20,7 @@ class CameraGrid {
             if (!response.ok) throw new Error('Failed to fetch cameras');
 
             this.cameras = await response.json();
+            console.log('Camera grid loaded cameras:', this.cameras.map(c => ({ id: c.id, name: c.name, totalChairs: c.totalChairs })));
             this.renderGrid();
         } catch (error) {
             console.error('Error loading cameras:', error);
@@ -63,6 +64,10 @@ class CameraGrid {
                 <div class="camera-yolo-median">
                     <span class="count-label">YOLO Median:</span>
                     <span class="yolo-median-value" id="yolo-median-${camera.id}">0</span>
+                </div>
+                <div class="camera-empty-chairs">
+                    <span class="count-label">Empty Chairs:</span>
+                    <span class="empty-chairs-value" id="empty-chairs-${camera.id}">--</span>
                 </div>
                 <div class="camera-median-count">
                     <span class="count-label">Adjusted Count:</span>
@@ -184,13 +189,60 @@ class CameraGrid {
             if (data.adjusted_count !== undefined) {
                 this.updateMedianCount(cameraId, data.adjusted_count, data.has_override || false);
             }
+            // Update empty chairs - use the value from backend if available, otherwise calculate
+            if (data.empty_chairs !== undefined && data.empty_chairs !== null) {
+                this.updateEmptyChairsValue(cameraId, data.empty_chairs, data.total_chairs || 0, data.adjusted_count || 0);
+            } else {
+                this.updateEmptyChairs(cameraId, data.adjusted_count);
+            }
         });
+    }
+
+    updateEmptyChairsValue(cameraId, emptyChairs, totalChairs, detectedPeople) {
+        const emptyChairsElement = document.getElementById(`empty-chairs-${cameraId}`);
+        if (!emptyChairsElement) return;
+
+        if (totalChairs === 0) {
+            emptyChairsElement.textContent = '--';
+            emptyChairsElement.title = 'Total chairs not configured. Click Edit to set.';
+            emptyChairsElement.style.color = '#999';
+        } else {
+            emptyChairsElement.textContent = emptyChairs;
+            emptyChairsElement.title = `${totalChairs} total chairs - ${detectedPeople} detected people = ${emptyChairs} empty chairs`;
+            emptyChairsElement.style.color = emptyChairs === 0 ? '#ff6b6b' : '#4CAF50';
+        }
     }
 
     updateYoloMedian(cameraId, yoloMedian) {
         const yoloMedianElement = document.getElementById(`yolo-median-${cameraId}`);
         if (yoloMedianElement) {
             yoloMedianElement.textContent = yoloMedian;
+        }
+    }
+
+    updateEmptyChairs(cameraId, detectedPeople) {
+        const emptyChairsElement = document.getElementById(`empty-chairs-${cameraId}`);
+        if (!emptyChairsElement) return;
+
+        // Find the camera configuration to get totalChairs
+        const camera = this.cameras.find(c => c.id === cameraId);
+        if (!camera) {
+            emptyChairsElement.textContent = '--';
+            return;
+        }
+
+        const totalChairs = camera.totalChairs || 0;
+        const detected = detectedPeople !== undefined ? detectedPeople : 0;
+        
+        if (totalChairs === 0) {
+            emptyChairsElement.textContent = '--';
+            emptyChairsElement.title = 'Total chairs not configured. Click Edit to set.';
+            emptyChairsElement.style.color = '#999';
+        } else {
+            const emptyChairs = Math.max(0, totalChairs - detected);
+            emptyChairsElement.textContent = emptyChairs;
+            emptyChairsElement.title = `${totalChairs} total chairs - ${detected} detected people = ${emptyChairs} empty chairs`;
+            emptyChairsElement.style.color = emptyChairs === 0 ? '#ff6b6b' : '#4CAF50';
         }
     }
 

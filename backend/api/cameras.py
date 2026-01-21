@@ -62,6 +62,7 @@ class CameraCreate(BaseModel):
     connection: CameraConnection
     profile: Optional[str] = None  # Will be auto-set based on type if not provided
     position: CameraPosition = CameraPosition()
+    totalChairs: int = 0  # Total chairs available for empty chairs calculation
     detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
 
 
@@ -73,6 +74,7 @@ class CameraUpdate(BaseModel):
     connection: Optional[CameraConnection] = None
     profile: Optional[str] = None
     position: Optional[CameraPosition] = None
+    totalChairs: Optional[int] = None  # Total chairs available for empty chairs calculation
     detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
 
 
@@ -166,6 +168,7 @@ async def create_camera(
         "connection": camera.connection.dict(),
         "profile": profile,
         "position": camera.position.dict(),
+        "totalChairs": camera.totalChairs,
         "detection_settings": camera.detection_settings.dict() if camera.detection_settings else None
     }
 
@@ -204,6 +207,9 @@ async def update_camera(
     # Update fields
     existing = cameras_list[camera_index]
 
+    # Debug logging
+    logger.info(f"Updating camera {camera_id}: totalChairs from {existing.get('totalChairs', 'N/A')} to {camera.totalChairs}")
+
     if camera.name is not None:
         existing["name"] = camera.name
     if camera.type is not None:
@@ -216,6 +222,9 @@ async def update_camera(
         existing["profile"] = camera.profile
     if camera.position is not None:
         existing["position"] = camera.position.dict()
+    if camera.totalChairs is not None:
+        existing["totalChairs"] = camera.totalChairs
+        logger.info(f"Set totalChairs for {camera_id} to {camera.totalChairs}")
     # Handle detection_settings - can be set to None to remove custom settings
     if "detection_settings" in camera.__fields_set__:
         existing["detection_settings"] = camera.detection_settings.dict() if camera.detection_settings else None
@@ -223,7 +232,7 @@ async def update_camera(
     # Save to file
     _save_cameras_config(state_manager)
 
-    logger.info(f"Updated camera: {camera_id}")
+    logger.info(f"Updated camera: {camera_id} - totalChairs is now {existing['totalChairs']}")
 
     return {"status": "ok", "camera": existing, "message": "Camera updated. Restart server to apply changes."}
 

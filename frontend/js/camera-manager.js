@@ -43,6 +43,7 @@ async function loadCameras() {
         if (!response.ok) throw new Error('Failed to load cameras');
 
         camerasCache = await response.json();
+        console.log('Loaded cameras into cache:', camerasCache.map(c => ({ id: c.id, name: c.name, totalChairs: c.totalChairs })));
         renderCameraList();
 
     } catch (error) {
@@ -104,7 +105,7 @@ function renderCameraList() {
                 <div class="camera-item-details">
                     <span class="camera-id">${camera.id}</span>
                     <span class="camera-url">${camera.connection.rtsp_url}</span>
-                    ${camera.detection_settings ? `<span class="camera-settings-summary">conf: ${camera.detection_settings.confidence_threshold}, img: ${camera.detection_settings.img_size}</span>` : ''}
+                    ${camera.detection_settings ? `<span class="camera-settings-summary">model: ${camera.detection_settings.detection_model || 'rgb'}, conf: ${camera.detection_settings.confidence_threshold}, img: ${camera.detection_settings.img_size}</span>` : ''}
                 </div>
             </div>
             <div class="camera-item-actions">
@@ -140,6 +141,9 @@ function showAddCameraForm() {
 function editCamera(cameraId) {
     const camera = camerasCache.find(c => c.id === cameraId);
     if (!camera) return;
+
+    console.log(`Editing camera ${cameraId}:`, camera);
+    console.log(`Camera ${cameraId} totalChairs:`, camera.totalChairs);
 
     document.getElementById('cameraFormTitle').textContent = 'Edit Camera';
     document.getElementById('editCameraId').value = cameraId;
@@ -194,17 +198,34 @@ function editCamera(cameraId) {
 
     document.getElementById('rtspUrl').value = rtspUrl;
     document.getElementById('cameraDescription').value = camera.position?.description || '';
+    
+    // Set totalChairs - ensure we're getting the right value
+    const totalChairsValue = camera.totalChairs !== undefined ? camera.totalChairs : 0;
+    document.getElementById('cameraTotalChairs').value = totalChairsValue;
+    console.log(`Set cameraTotalChairs input to: ${totalChairsValue}`);
 
     // Load detection settings if they exist
     if (camera.detection_settings) {
         document.getElementById('cameraUseCustomSettings').checked = true;
         document.getElementById('cameraDetectionSettings').style.display = 'block';
+        document.getElementById('cameraDetectionModel').value = camera.detection_settings.detection_model || 'rgb';
         document.getElementById('cameraConfidence').value = camera.detection_settings.confidence_threshold || 0.25;
         document.getElementById('cameraConfidenceValue').textContent = camera.detection_settings.confidence_threshold || 0.25;
         document.getElementById('cameraIou').value = camera.detection_settings.iou_threshold || 0.45;
         document.getElementById('cameraIouValue').textContent = camera.detection_settings.iou_threshold || 0.45;
         document.getElementById('cameraImgSize').value = camera.detection_settings.img_size || 640;
         document.getElementById('cameraPreprocessing').value = camera.detection_settings.preprocessing || 'none';
+        // Blob hotspot settings
+        document.getElementById('blobThreshold').value = camera.detection_settings.blob_threshold || 200;
+        document.getElementById('blobThresholdValue').textContent = camera.detection_settings.blob_threshold || 200;
+        document.getElementById('blobMinArea').value = camera.detection_settings.blob_min_area || 2000;
+        document.getElementById('blobMinAreaValue').textContent = camera.detection_settings.blob_min_area || 2000;
+        document.getElementById('blobMaxArea').value = camera.detection_settings.blob_max_area || 50000;
+        document.getElementById('blobMaxAreaValue').textContent = camera.detection_settings.blob_max_area || 50000;
+        document.getElementById('blobAspectMin').value = camera.detection_settings.blob_aspect_ratio_min || 0.5;
+        document.getElementById('blobAspectMax').value = camera.detection_settings.blob_aspect_ratio_max || 3.0;
+        // Show/hide blob settings based on model
+        onDetectionModelChange();
     } else {
         document.getElementById('cameraUseCustomSettings').checked = false;
         document.getElementById('cameraDetectionSettings').style.display = 'none';
@@ -236,16 +257,28 @@ function resetCameraForm() {
     document.getElementById('videoFile').value = '';
     document.getElementById('rtspUrl').value = '';
     document.getElementById('cameraDescription').value = '';
+    document.getElementById('cameraTotalChairs').value = 0;
 
     // Reset detection settings
     document.getElementById('cameraUseCustomSettings').checked = false;
     document.getElementById('cameraDetectionSettings').style.display = 'none';
+    document.getElementById('cameraDetectionModel').value = 'rgb';
     document.getElementById('cameraConfidence').value = 0.25;
     document.getElementById('cameraConfidenceValue').textContent = '0.25';
     document.getElementById('cameraIou').value = 0.45;
     document.getElementById('cameraIouValue').textContent = '0.45';
     document.getElementById('cameraImgSize').value = '640';
     document.getElementById('cameraPreprocessing').value = 'none';
+    // Reset blob hotspot settings
+    document.getElementById('blobThreshold').value = 200;
+    document.getElementById('blobThresholdValue').textContent = '200';
+    document.getElementById('blobMinArea').value = 2000;
+    document.getElementById('blobMinAreaValue').textContent = '2000';
+    document.getElementById('blobMaxArea').value = 50000;
+    document.getElementById('blobMaxAreaValue').textContent = '50000';
+    document.getElementById('blobAspectMin').value = 0.5;
+    document.getElementById('blobAspectMax').value = 3.0;
+    document.getElementById('blobHotspotSettings').style.display = 'none';
 
     onConnectionTypeChange();
     hideCameraFormStatus();
@@ -257,6 +290,20 @@ function resetCameraForm() {
 function onCustomSettingsToggle() {
     const useCustom = document.getElementById('cameraUseCustomSettings').checked;
     document.getElementById('cameraDetectionSettings').style.display = useCustom ? 'block' : 'none';
+    if (useCustom) {
+        onDetectionModelChange();
+    }
+}
+
+/**
+ * Show/hide blob hotspot settings based on detection model
+ */
+function onDetectionModelChange() {
+    const model = document.getElementById('cameraDetectionModel').value;
+    const blobSettings = document.getElementById('blobHotspotSettings');
+    if (blobSettings) {
+        blobSettings.style.display = model === 'blob_hotspot' ? 'block' : 'none';
+    }
 }
 
 /**
@@ -384,7 +431,32 @@ async function saveCamera() {
     const editId = document.getElementById('editCameraId').value;
     const isEdit = !!editId;
 
-    // Gather form data
+    // Gather form data - UPDATED VERSION
+    const totalChairsInput = document.getElementById('cameraTotalChairs');
+    
+    console.warn('=== TOTALCHAIRS DEBUG START ===');
+    console.warn('Input element exists:', !!totalChairsInput);
+    console.warn('Input value:', totalChairsInput?.value);
+    console.warn('Input value type:', typeof totalChairsInput?.value);
+    
+    let totalChairsFinal = 0;
+    
+    if (totalChairsInput && totalChairsInput.value !== null && totalChairsInput.value !== undefined && totalChairsInput.value !== '') {
+        const parsed = parseInt(totalChairsInput.value, 10);
+        console.warn('Parsed value:', parsed);
+        console.warn('Is NaN:', isNaN(parsed));
+        if (!isNaN(parsed) && parsed >= 0) {
+            totalChairsFinal = parsed;
+        }
+    }
+    
+    console.warn('Final totalChairs value:', totalChairsFinal);
+    console.warn('=== TOTALCHAIRS DEBUG END ===');
+    
+    // Alert for visibility
+    const alertMsg = `TotalChairs Debug:\nInput value: "${totalChairsInput?.value}"\nFinal value: ${totalChairsFinal}`;
+    alert(alertMsg);
+
     const cameraData = {
         name: document.getElementById('cameraName').value,
         type: document.getElementById('cameraType').value,
@@ -392,7 +464,7 @@ async function saveCamera() {
         profile: document.getElementById('cameraProfile').value,
         connection: {
             ip: document.getElementById('cameraIp').value || 'localhost',
-            rtsp_port: parseInt(document.getElementById('rtspPort').value) || 554,
+            rtsp_port: parseInt(document.getElementById('rtspPort').value, 10) || 554,
             http_port: 80,
             username: document.getElementById('cameraUsername').value || '',
             password: document.getElementById('cameraPassword').value || '',
@@ -402,16 +474,28 @@ async function saveCamera() {
         position: {
             description: document.getElementById('cameraDescription').value,
             floor: 1
-        }
+        },
+        totalChairs: totalChairsFinal
     };
+
+    // Debug: Log the totalChairs value being saved
+    console.log(`Saving camera ${editId || 'NEW'} with totalChairs: ${cameraData.totalChairs}`);
+    console.log('Full camera data being sent:', JSON.stringify(cameraData, null, 2));
 
     // Add detection settings if custom settings are enabled
     if (document.getElementById('cameraUseCustomSettings').checked) {
         cameraData.detection_settings = {
+            detection_model: document.getElementById('cameraDetectionModel').value,
             confidence_threshold: parseFloat(document.getElementById('cameraConfidence').value),
             iou_threshold: parseFloat(document.getElementById('cameraIou').value),
             img_size: parseInt(document.getElementById('cameraImgSize').value),
-            preprocessing: document.getElementById('cameraPreprocessing').value
+            preprocessing: document.getElementById('cameraPreprocessing').value,
+            // Blob hotspot settings
+            blob_threshold: parseInt(document.getElementById('blobThreshold').value),
+            blob_min_area: parseInt(document.getElementById('blobMinArea').value),
+            blob_max_area: parseInt(document.getElementById('blobMaxArea').value),
+            blob_aspect_ratio_min: parseFloat(document.getElementById('blobAspectMin').value),
+            blob_aspect_ratio_max: parseFloat(document.getElementById('blobAspectMax').value)
         };
     } else {
         cameraData.detection_settings = null;
@@ -451,6 +535,11 @@ async function saveCamera() {
 
         // Reload cameras list
         await loadCameras();
+
+        // Reload main camera grid to reflect changes
+        if (window.cameraGrid && typeof window.cameraGrid.loadCameras === 'function') {
+            await window.cameraGrid.loadCameras();
+        }
 
         // Go back to list after short delay
         setTimeout(() => {
@@ -493,6 +582,11 @@ async function deleteCamera() {
 
         // Reload cameras list
         await loadCameras();
+
+        // Reload main camera grid to reflect changes
+        if (window.cameraGrid) {
+            await window.cameraGrid.loadCameras();
+        }
 
         // Go back to list after short delay
         setTimeout(() => {

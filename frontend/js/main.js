@@ -80,7 +80,7 @@ async function updateStatusHTTP() {
             });
             cameraGrid.updateCounts(countsByCamera);
 
-            // Update median counts
+            // Update median counts and empty chairs
             cameraGrid.updateMedianCounts(data.cameras);
         }
 
