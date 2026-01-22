@@ -1,6 +1,6 @@
 """
 Counting API Endpoints
-Get counts and manage manual overrides
+Get empty chair counts and manage manual overrides
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -17,10 +17,10 @@ class CountOverride(BaseModel):
 
 
 @router.get("/counting/total")
-async def get_total_count(state_manager = Depends(get_state_manager)) -> Dict:
-    """Get total count across all cameras"""
+async def get_total_empty_chairs(state_manager = Depends(get_state_manager)) -> Dict:
+    """Get total empty chairs count across all cameras"""
     return {
-        "total": state_manager.get_total_count(),
+        "total_empty_chairs": state_manager.get_total_empty_chairs(),
         "timestamp": state_manager.last_update_total.isoformat() if state_manager.last_update_total else None
     }
 
@@ -32,22 +32,22 @@ async def get_counts_summary(state_manager = Depends(get_state_manager)) -> Dict
 
 
 @router.get("/counting/{camera_id}")
-async def get_camera_count(camera_id: str, state_manager = Depends(get_state_manager)) -> Dict:
-    """Get count for a specific camera"""
+async def get_camera_empty_chairs(camera_id: str, state_manager = Depends(get_state_manager)) -> Dict:
+    """Get empty chairs count for a specific camera"""
     count = state_manager.get_count(camera_id)
     if count is None:
         raise HTTPException(status_code=404, detail="Camera not found")
 
     return {
         "camera_id": camera_id,
-        "count": count,
+        "empty_chairs": count,
         "timestamp": state_manager.last_update.get(camera_id).isoformat() if camera_id in state_manager.last_update else None
     }
 
 
 @router.put("/counting/{camera_id}/override")
-async def override_camera_count(camera_id: str, override: CountOverride, state_manager = Depends(get_state_manager)) -> Dict:
-    """Manual override for camera median count"""
+async def override_camera_empty_chairs(camera_id: str, override: CountOverride, state_manager = Depends(get_state_manager)) -> Dict:
+    """Manual override for camera empty chairs count"""
     camera = state_manager.get_camera_config(camera_id)
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
@@ -55,15 +55,15 @@ async def override_camera_count(camera_id: str, override: CountOverride, state_m
     state_manager.manual_override_count(camera_id, override.count)
 
     return {
-        "message": "Count overridden successfully",
+        "message": "Empty chairs count overridden successfully",
         "camera_id": camera_id,
-        "new_count": override.count
+        "empty_chairs": override.count
     }
 
 
 @router.delete("/counting/{camera_id}/override")
 async def clear_camera_override(camera_id: str, state_manager = Depends(get_state_manager)) -> Dict:
-    """Clear manual override for camera median count (return to auto-calculated median)"""
+    """Clear manual override for camera empty chairs count (return to auto-calculated value)"""
     camera = state_manager.get_camera_config(camera_id)
     if not camera:
         raise HTTPException(status_code=404, detail="Camera not found")
@@ -73,7 +73,7 @@ async def clear_camera_override(camera_id: str, state_manager = Depends(get_stat
     return {
         "message": "Override cleared successfully",
         "camera_id": camera_id,
-        "median_count": state_manager.get_median_count(camera_id)
+        "empty_chairs": state_manager.get_empty_chairs(camera_id)
     }
 
 

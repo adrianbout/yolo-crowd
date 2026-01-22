@@ -93,10 +93,10 @@ class WebSocketClient {
     }
 
     handleCountsUpdate(data) {
-        // Update total count
+        // Update total empty chairs count
         const totalCountElement = document.getElementById('totalCount');
         if (totalCountElement) {
-            totalCountElement.textContent = data.total || 0;
+            totalCountElement.textContent = data.total_empty_chairs || 0;
         }
 
         // Update last update time

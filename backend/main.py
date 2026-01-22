@@ -161,16 +161,19 @@ async def get_system_status():
     """Get complete system status"""
     camera_status = detection_service.camera_manager.get_all_status() if detection_service.camera_manager else {}
 
-    # Add median counts and override status to camera data
+    # Add median counts and empty chairs override status to camera data
     for camera_id in camera_status:
-        # yolo_median: always the calculated median (for display only)
+        # yolo_median: always the calculated median of people detected
         yolo_median = state_manager._calculate_median(camera_id)
-        # adjusted_count: manual override if set, otherwise yolo_median (used for total)
-        adjusted_count = state_manager.get_median_count(camera_id)
-        has_override = state_manager.manual_overrides.get(camera_id) is not None
+        # empty_chairs: calculated or overridden
+        empty_chairs = state_manager.get_empty_chairs(camera_id)
+        # adjusted_empty_chairs is same as empty_chairs (for compatibility)
+        adjusted_empty_chairs = empty_chairs
+        has_override = state_manager.empty_chairs_overrides.get(camera_id) is not None
 
         camera_status[camera_id]["yolo_median"] = yolo_median
-        camera_status[camera_id]["adjusted_count"] = adjusted_count
+        camera_status[camera_id]["empty_chairs"] = empty_chairs
+        camera_status[camera_id]["adjusted_empty_chairs"] = adjusted_empty_chairs
         camera_status[camera_id]["has_override"] = has_override
 
     return {

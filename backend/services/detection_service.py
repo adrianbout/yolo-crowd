@@ -231,7 +231,7 @@ class DetectionService:
                 elapsed = time.time() - loop_start
                 logger.info(
                     f"Inference {self.total_inferences}: {len(frames)} cameras, "
-                    f"{total_count} detections, {elapsed*1000:.1f}ms"
+                    f"{total_count} empty chairs, {elapsed*1000:.1f}ms"
                 )
 
                 # Control inference rate

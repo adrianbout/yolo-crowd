@@ -51,8 +51,8 @@ class StateManager:
         self.count_history: Dict[str, deque] = {}
         self.median_window_seconds = 10
 
-        # Manual overrides for median counts (None = use calculated median)
-        self.manual_overrides: Dict[str, Optional[int]] = {}
+        # Manual overrides for empty chairs count (None = use calculated value)
+        self.empty_chairs_overrides: Dict[str, Optional[int]] = {}
 
     def load_configuration(self):
         """Load all configuration files"""
@@ -85,7 +85,7 @@ class StateManager:
             self.counts[camera_id] = 0
             self.detection_history[camera_id] = []
             self.count_history[camera_id] = deque()
-            self.manual_overrides[camera_id] = None
+            self.empty_chairs_overrides[camera_id] = None
 
     def update_count(self, camera_id: str, count: int):
         """
@@ -158,6 +158,46 @@ class StateManager:
         with self.lock:
             return self._calculate_total_median()
 
+    def get_total_empty_chairs(self) -> int:
+        """
+        Get total empty chairs count across all cameras
+        Returns:
+            Total empty chairs count (total_chairs - people_detected for each camera)
+        """
+        with self.lock:
+            return self._calculate_total_empty_chairs()
+
+    def _calculate_total_empty_chairs(self) -> int:
+        """
+        Calculate total empty chairs across all cameras
+        Returns:
+            Sum of empty chairs for each camera (uses override if set)
+        """
+        total_empty = 0
+        for cam_id in self.counts.keys():
+            total_empty += self.get_empty_chairs(cam_id)
+        return total_empty
+
+    def get_empty_chairs(self, camera_id: str) -> int:
+        """
+        Get empty chairs count for a camera (uses manual override if set)
+        Args:
+            camera_id: Camera identifier
+        Returns:
+            Empty chairs count (manual override or calculated)
+        """
+        # Return manual override if set
+        if camera_id in self.empty_chairs_overrides and self.empty_chairs_overrides[camera_id] is not None:
+            return self.empty_chairs_overrides[camera_id]
+
+        # Calculate from total_chairs - people_detected
+        camera_config = self.get_camera_config(camera_id)
+        total_chairs = camera_config.get('totalChairs', 0) if camera_config else 0
+        if total_chairs > 0:
+            median_count = self._calculate_median(camera_id)
+            return max(0, total_chairs - median_count)
+        return 0
+
     def get_counts_summary(self) -> Dict:
         """
         Get complete counts summary
@@ -165,37 +205,39 @@ class StateManager:
             Summary dictionary with counts and timestamps
         """
         with self.lock:
-            # Always calculate total from median counts
-            total_median = self._calculate_total_median()
-            
             # Build detailed camera data including median counts and empty chairs
             camera_data = {}
+            total_empty_chairs = 0
+
             for cam_id in self.counts.keys():
                 # Get camera config for totalChairs
                 camera_config = self.get_camera_config(cam_id)
                 total_chairs = camera_config.get('totalChairs', 0) if camera_config else 0
-                
-                # Get median count (or manual override)
-                median_count = self.get_median_count(cam_id)
-                has_override = cam_id in self.manual_overrides and self.manual_overrides[cam_id] is not None
-                
+
                 # Calculate YOLO median (always the calculated value, ignoring overrides)
                 yolo_median = self._calculate_median(cam_id)
-                
-                # Calculate empty chairs
-                empty_chairs = max(0, total_chairs - median_count) if total_chairs > 0 else None
-                
+
+                # Calculate empty chairs from YOLO (without override)
+                calculated_empty = max(0, total_chairs - yolo_median) if total_chairs > 0 else 0
+
+                # Get adjusted empty chairs (uses override if set)
+                adjusted_empty_chairs = self.get_empty_chairs(cam_id)
+                has_override = cam_id in self.empty_chairs_overrides and self.empty_chairs_overrides[cam_id] is not None
+
+                # Add to total empty chairs
+                total_empty_chairs += adjusted_empty_chairs
+
                 camera_data[cam_id] = {
-                    "count": self.counts[cam_id],  # Current YOLO count
-                    "yolo_median": yolo_median,  # Calculated median from YOLO
-                    "adjusted_count": median_count,  # Median or manual override
+                    "count": self.counts[cam_id],  # Current YOLO count (people detected)
+                    "yolo_median": yolo_median,  # Calculated median from YOLO (people)
+                    "empty_chairs": calculated_empty,  # Calculated empty chairs (from YOLO)
+                    "adjusted_empty_chairs": adjusted_empty_chairs,  # Empty chairs (with override)
                     "has_override": has_override,
-                    "total_chairs": total_chairs,
-                    "empty_chairs": empty_chairs
+                    "total_chairs": total_chairs
                 }
-            
+
             return {
-                "total": total_median,
+                "total_empty_chairs": total_empty_chairs,
                 "by_camera": self.counts.copy(),  # Keep for backward compatibility
                 "camera_data": camera_data,  # New detailed data structure
                 "last_update_total": self.last_update_total.isoformat() if self.last_update_total else None,
@@ -363,12 +405,9 @@ class StateManager:
         Args:
             camera_id: Camera identifier
         Returns:
-            Median count or manual override
+            Median count (people detected)
         """
-        # Return manual override if set
-        if camera_id in self.manual_overrides and self.manual_overrides[camera_id] is not None:
-            return self.manual_overrides[camera_id]
-
+        # Return calculated median (no override for people count anymore)
         return self._calculate_median(camera_id)
 
     def get_all_median_counts(self) -> Dict[str, int]:
@@ -380,38 +419,44 @@ class StateManager:
         with self.lock:
             return {cam_id: self.get_median_count(cam_id) for cam_id in self.counts.keys()}
 
-    def set_manual_override(self, camera_id: str, count: int):
+    def set_empty_chairs_override(self, camera_id: str, count: int):
         """
-        Set manual override for a camera's median count
+        Set manual override for a camera's empty chairs count
         Args:
             camera_id: Camera identifier
-            count: Override value
+            count: Override value for empty chairs
         """
         with self.lock:
-            self.manual_overrides[camera_id] = count
-            self.total_count = self._calculate_total_median()
-            logger.info(f"Manual override set: Camera {camera_id} median count set to {count}")
+            self.empty_chairs_overrides[camera_id] = count
+            logger.info(f"Manual override set: Camera {camera_id} empty chairs set to {count}")
 
-    def clear_manual_override(self, camera_id: str):
+    def clear_empty_chairs_override(self, camera_id: str):
         """
-        Clear manual override for a camera (return to calculated median)
+        Clear manual override for a camera's empty chairs (return to calculated value)
         Args:
             camera_id: Camera identifier
         """
         with self.lock:
-            self.manual_overrides[camera_id] = None
-            self.total_count = self._calculate_total_median()
+            self.empty_chairs_overrides[camera_id] = None
             logger.info(f"Manual override cleared for camera {camera_id}")
 
     def manual_override_count(self, camera_id: str, count: int):
         """
-        Manual override for count (from API) - now sets the median override
+        Manual override for empty chairs count (from API)
         Args:
             camera_id: Camera identifier
-            count: New count value
+            count: New empty chairs count
         """
-        logger.info(f"Manual override: Camera {camera_id} count set to {count}")
-        self.set_manual_override(camera_id, count)
+        logger.info(f"Manual override: Camera {camera_id} empty chairs set to {count}")
+        self.set_empty_chairs_override(camera_id, count)
+
+    def clear_manual_override(self, camera_id: str):
+        """
+        Clear manual override for a camera (return to calculated value)
+        Args:
+            camera_id: Camera identifier
+        """
+        self.clear_empty_chairs_override(camera_id)
 
     def reset_counts(self):
         """Reset all counts to zero"""
@@ -429,12 +474,12 @@ class StateManager:
             System status dictionary
         """
         with self.lock:
-            # Always calculate total from current median counts
-            total_median = self._calculate_total_median()
+            # Calculate total empty chairs correctly
+            total_empty = self._calculate_total_empty_chairs()
             return {
                 "total_cameras": len(self.cameras.get("cameras", [])),
                 "enabled_cameras": len([c for c in self.cameras.get("cameras", []) if c.get("enabled", True)]),
-                "total_count": total_median,
+                "total_empty_chairs": total_empty,
                 "last_update": self.last_update_total.isoformat() if self.last_update_total else None,
                 "cameras_with_roi": len([k for k, v in self.rois.get("rois", {}).items() if v.get("enabled", False)])
             }

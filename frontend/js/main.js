@@ -33,10 +33,10 @@ async function updateStatusHTTP() {
         const response = await fetch(`${API_BASE}/status`);
         const data = await response.json();
 
-        // Update total count
+        // Update total empty chairs count
         const totalCountElement = document.getElementById('totalCount');
         if (totalCountElement) {
-            totalCountElement.textContent = data.system.total_count || 0;
+            totalCountElement.textContent = data.system.total_empty_chairs || 0;
         }
 
         // Update last update time
