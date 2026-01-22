@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  smartchair:
+    build:
+      context: .
+      dockerfile: Dockerfile.gpu
+    container_name: smartchair-counter
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount config directory for persistence
+      - ./config:/app/config
+      # Mount weights directory
+      - ./weights:/app/weights
+      # Mount frontend
+      - ./frontend:/app/frontend
+      # Mount logs directory
+      - ./logs:/app/logs
+      # Optional: Mount videos if needed
+      # - ./videos:/app/videos
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+    restart: unless-stopped
+    # GPU support enabled
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
