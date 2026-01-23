@@ -3,7 +3,7 @@
  * Handles detection settings UI and API communication
  */
 
-const SETTINGS_API = 'http://localhost:8000/api';
+const SETTINGS_API = `${window.location.origin}/api`;
 
 // Default settings
 const DEFAULT_SETTINGS = {

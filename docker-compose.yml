@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile.gpu
     container_name: smartchair-counter
     ports:
-      - "8000:8000"
+      - "${HOST_PORT:-8000}:${PORT:-8000}"
     volumes:
       # Mount config directory for persistence
       - ./config:/app/config
@@ -19,11 +19,14 @@ services:
       - ./logs:/app/logs
       # Optional: Mount videos if needed
       # - ./videos:/app/videos
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
       - CUDA_VISIBLE_DEVICES=0
       - NVIDIA_VISIBLE_DEVICES=all
+      - PORT=${PORT:-8000}
     restart: unless-stopped
     # GPU support enabled
     deploy:

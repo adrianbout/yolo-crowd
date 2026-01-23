@@ -1,0 +1,92 @@
+{
+  "cameras": [
+    {
+      "id": "cam_001",
+      "name": "Zone 1 - Thermal",
+      "type": "thermal",
+      "enabled": true,
+      "connection": {
+        "ip": "192.168.95.101",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.95.101:554/Streaming/Channels/101",
+        "isapi_base": "http://192.168.95.101/ISAPI"
+      },
+      "profile": "thermal_default",
+      "position": {
+        "description": "North entrance area",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_002",
+      "name": "Zone 2 - Infrared",
+      "type": "infrared",
+      "enabled": true,
+      "connection": {
+        "ip": "192.168.95.102",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.95.102:554/Streaming/Channels/101",
+        "isapi_base": "http://192.168.95.102/ISAPI"
+      },
+      "profile": "infrared_default",
+      "position": {
+        "description": "Main hall west",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_003",
+      "name": "Zone 3 - RGB",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "192.168.95.103",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.95.103:554/Streaming/Channels/101",
+        "isapi_base": "http://192.168.95.103/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Main hall east",
+        "floor": 1
+      }
+    },
+    {
+      "id": "cam_004",
+      "name": "Zone 4 - RGB",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "192.168.95.104",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.95.104:554/Streaming/Channels/101",
+        "isapi_base": "http://192.168.95.104/ISAPI"
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "South section",
+        "floor": 1
+      }
+    }
+  ],
+  "global_settings": {
+    "max_cameras": 20,
+    "reconnect_attempts": 3,
+    "reconnect_delay_seconds": 5,
+    "frame_skip": 0,
+    "stream_buffer_size": 1,
+    "use_hikvision_sdk": true
+  }
+}

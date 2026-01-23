@@ -65,6 +65,39 @@
         "blob_aspect_ratio_max": 3.0
       },
       "totalChairs": 5
+    },
+    {
+      "id": "cam_005",
+      "name": "camera1",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "192.168.1.64",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "1Jack$%^",
+        "rtsp_url": "rtsp://admin:1Jack$%^@192.168.1.64:554/Streaming/Channels/102",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "",
+        "floor": 1
+      },
+      "totalChairs": 1,
+      "detection_settings": {
+        "detection_model": "rgb",
+        "confidence_threshold": 0.25,
+        "iou_threshold": 0.45,
+        "img_size": 640,
+        "preprocessing": "none",
+        "blob_threshold": 200,
+        "blob_min_area": 2000,
+        "blob_max_area": 50000,
+        "blob_aspect_ratio_min": 0.5,
+        "blob_aspect_ratio_max": 3.0
+      }
     }
   ],
   "global_settings": {

@@ -3,7 +3,7 @@
  * Handles display and updates for camera feeds
  */
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = `${window.location.origin}/api`;
 
 class CameraGrid {
     constructor(containerId) {
@@ -11,6 +11,7 @@ class CameraGrid {
         this.cameras = [];
         this.counts = {};
         this.medianCounts = {};
+        this.adjustedEmptyChairs = {};
         this.hasOverride = {};
     }
 
@@ -70,12 +71,12 @@ class CameraGrid {
                     <span class="empty-chairs-value" id="empty-chairs-${camera.id}">--</span>
                 </div>
                 <div class="camera-median-count">
-                    <span class="count-label">Adjusted Count:</span>
+                    <span class="count-label">Adjusted Empty Chairs:</span>
                     <div class="median-controls">
-                        <button class="btn-adjust btn-minus" onclick="adjustMedianCount('${camera.id}', -1)">-</button>
-                        <span class="median-value" id="median-${camera.id}">0</span>
-                        <button class="btn-adjust btn-plus" onclick="adjustMedianCount('${camera.id}', 1)">+</button>
-                        <button class="btn-reset-override" id="reset-override-${camera.id}" onclick="clearOverride('${camera.id}')" style="display: none;" title="Reset to YOLO median">&#x21ba;</button>
+                        <button class="btn-adjust btn-minus" onclick="adjustEmptyChairs('${camera.id}', -1)">-</button>
+                        <span class="median-value" id="adjusted-empty-${camera.id}">0</span>
+                        <button class="btn-adjust btn-plus" onclick="adjustEmptyChairs('${camera.id}', 1)">+</button>
+                        <button class="btn-reset-override" id="reset-override-${camera.id}" onclick="clearOverride('${camera.id}')" style="display: none;" title="Reset to calculated value">&#x21ba;</button>
                     </div>
                 </div>
                 <div class="camera-actions">
@@ -158,18 +159,18 @@ class CameraGrid {
         });
     }
 
-    updateMedianCount(cameraId, medianCount, hasOverride) {
-        const medianElement = document.getElementById(`median-${cameraId}`);
-        if (medianElement) {
-            medianElement.textContent = medianCount;
+    updateAdjustedEmptyChairs(cameraId, adjustedEmptyChairs, hasOverride) {
+        const adjustedElement = document.getElementById(`adjusted-empty-${cameraId}`);
+        if (adjustedElement) {
+            adjustedElement.textContent = adjustedEmptyChairs;
             // Highlight if manual override is active
             if (hasOverride) {
-                medianElement.classList.add('has-override');
+                adjustedElement.classList.add('has-override');
             } else {
-                medianElement.classList.remove('has-override');
+                adjustedElement.classList.remove('has-override');
             }
         }
-        this.medianCounts[cameraId] = medianCount;
+        this.adjustedEmptyChairs[cameraId] = adjustedEmptyChairs;
         this.hasOverride[cameraId] = hasOverride;
 
         // Show/hide reset button
@@ -185,15 +186,13 @@ class CameraGrid {
             if (data.yolo_median !== undefined) {
                 this.updateYoloMedian(cameraId, data.yolo_median);
             }
-            // Update adjusted count (manual override or yolo median)
-            if (data.adjusted_count !== undefined) {
-                this.updateMedianCount(cameraId, data.adjusted_count, data.has_override || false);
-            }
-            // Update empty chairs - use the value from backend if available, otherwise calculate
+            // Update empty chairs (calculated from YOLO)
             if (data.empty_chairs !== undefined && data.empty_chairs !== null) {
-                this.updateEmptyChairsValue(cameraId, data.empty_chairs, data.total_chairs || 0, data.adjusted_count || 0);
-            } else {
-                this.updateEmptyChairs(cameraId, data.adjusted_count);
+                this.updateEmptyChairsValue(cameraId, data.empty_chairs, data.total_chairs || 0, data.yolo_median || 0);
+            }
+            // Update adjusted empty chairs (manual override or calculated)
+            if (data.adjusted_empty_chairs !== undefined) {
+                this.updateAdjustedEmptyChairs(cameraId, data.adjusted_empty_chairs, data.has_override || false);
             }
         });
     }
@@ -279,11 +278,11 @@ async function viewCameraDetails(cameraId) {
     }
 }
 
-// Adjust median count manually
-async function adjustMedianCount(cameraId, delta) {
+// Adjust empty chairs manually
+async function adjustEmptyChairs(cameraId, delta) {
     try {
-        // Get current median count
-        const currentCount = cameraGrid.medianCounts[cameraId] || 0;
+        // Get current adjusted empty chairs count
+        const currentCount = cameraGrid.adjustedEmptyChairs[cameraId] || 0;
         const newCount = Math.max(0, currentCount + delta);
 
         // Send override to API
@@ -295,13 +294,13 @@ async function adjustMedianCount(cameraId, delta) {
             body: JSON.stringify({ count: newCount })
         });
 
-        if (!response.ok) throw new Error('Failed to update count');
+        if (!response.ok) throw new Error('Failed to update empty chairs count');
 
         // Update UI immediately
-        cameraGrid.updateMedianCount(cameraId, newCount, true);
+        cameraGrid.updateAdjustedEmptyChairs(cameraId, newCount, true);
 
     } catch (error) {
-        console.error('Error adjusting median count:', error);
+        console.error('Error adjusting empty chairs:', error);
     }
 }
 
@@ -315,7 +314,8 @@ async function clearOverride(cameraId) {
         if (!response.ok) throw new Error('Failed to clear override');
 
         const result = await response.json();
-        cameraGrid.updateMedianCount(cameraId, result.median_count, false);
+        // Update with the calculated empty chairs value
+        cameraGrid.updateAdjustedEmptyChairs(cameraId, result.empty_chairs || 0, false);
 
     } catch (error) {
         console.error('Error clearing override:', error);

@@ -3,6 +3,7 @@ SmartChairCounter - Main Application Entry Point
 Starts the FastAPI backend server
 """
 
+import os
 import sys
 import logging
 from pathlib import Path
@@ -28,15 +29,19 @@ def main():
     """Main entry point"""
     import uvicorn
 
+    # Get port from environment variable, default to 8000
+    port = int(os.environ.get("PORT", 8000))
+
     logger.info("="*60)
     logger.info("SmartChairCounter Application Starting...")
+    logger.info(f"Server will listen on port {port}")
     logger.info("="*60)
 
     # Start FastAPI server
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=False,
         log_level="info",
         app_dir=str(backend_path)

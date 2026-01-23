@@ -3,7 +3,7 @@
  * Handles camera CRUD operations and UI
  */
 
-const CAMERA_API = 'http://localhost:8000/api';
+const CAMERA_API = `${window.location.origin}/api`;
 
 // Cache for cameras and profiles
 let camerasCache = [];
