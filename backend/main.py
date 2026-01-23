@@ -53,6 +53,9 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(broadcast_task())
 
         logger.info("Application started successfully")
+        logger.info("="*60)
+        logger.info("Frontend URL: http://localhost:8000/frontend/index.html")
+        logger.info("="*60)
 
     except Exception as e:
         logger.error(f"Failed to start application: {e}", exc_info=True)

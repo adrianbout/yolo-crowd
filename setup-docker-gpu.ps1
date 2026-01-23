@@ -43,18 +43,18 @@ Write-Info "========================================"
 Write-Info ""
 
 # Step 1: Check NVIDIA GPU
-Write-Info "[1/7] Checking NVIDIA GPU..."
+Write-Info "[1/5] Checking NVIDIA GPU..."
 if (-not $SkipDriverCheck) {
     try {
         $nvidiaCheck = nvidia-smi 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "✓ NVIDIA GPU detected"
+            Write-Success "[OK] NVIDIA GPU detected"
             Write-Info $nvidiaCheck | Select-Object -First 3
         } else {
             throw "nvidia-smi not found"
         }
     } catch {
-        Write-Warning "⚠ NVIDIA driver not found or outdated"
+        Write-Warning "[WARNING] NVIDIA driver not found or outdated"
         Write-Info "Please install NVIDIA drivers from: https://www.nvidia.com/Download/index.aspx"
         $response = Read-Host "Do you want to open the NVIDIA driver download page? (Y/N)"
         if ($response -eq 'Y' -or $response -eq 'y') {
@@ -69,20 +69,20 @@ if (-not $SkipDriverCheck) {
 
 # Step 2: Install/Check WSL 2
 Write-Info ""
-Write-Info "[2/7] Checking WSL 2..."
+Write-Info "[2/5] Checking WSL 2..."
 if (-not $SkipWSL) {
     try {
         $wslStatus = wsl --status 2>&1
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "✓ WSL 2 is installed"
+            Write-Success "[OK] WSL 2 is installed"
         } else {
             throw "WSL not found"
         }
     } catch {
-        Write-Warning "⚠ WSL 2 not found. Installing..."
+        Write-Warning "[WARNING] WSL 2 not found. Installing..."
         try {
             wsl --install
-            Write-Success "✓ WSL 2 installed successfully"
+            Write-Success "[OK] WSL 2 installed successfully"
             Write-Warning "SYSTEM RESTART REQUIRED!"
             Write-Info "After restart, run this script again."
             $response = Read-Host "Restart now? (Y/N)"
@@ -98,20 +98,20 @@ if (-not $SkipWSL) {
 
     # Set WSL 2 as default
     wsl --set-default-version 2 2>&1 | Out-Null
-    Write-Success "✓ WSL 2 set as default"
+    Write-Success "[OK] WSL 2 set as default"
 } else {
     Write-Warning "Skipping WSL check..."
 }
 
 # Step 3: Check/Install Docker Desktop
 Write-Info ""
-Write-Info "[3/7] Checking Docker Desktop..."
+Write-Info "[3/5] Checking Docker Desktop..."
 if (-not $SkipDockerInstall) {
     $dockerPath = "C:\Program Files\Docker\Docker\Docker Desktop.exe"
     if (Test-Path $dockerPath) {
-        Write-Success "✓ Docker Desktop is installed"
+        Write-Success "[OK] Docker Desktop is installed"
     } else {
-        Write-Warning "⚠ Docker Desktop not found"
+        Write-Warning "[WARNING] Docker Desktop not found"
         Write-Info "Downloading Docker Desktop installer..."
 
         $installerPath = "$env:TEMP\DockerDesktopInstaller.exe"
@@ -120,13 +120,13 @@ if (-not $SkipDockerInstall) {
         try {
             Write-Info "Downloading from: $downloadUrl"
             Invoke-WebRequest -Uri $downloadUrl -OutFile $installerPath -UseBasicParsing
-            Write-Success "✓ Download complete"
+            Write-Success "[OK] Download complete"
 
             Write-Info "Installing Docker Desktop..."
             Write-Warning "This may take several minutes..."
             Start-Process -FilePath $installerPath -ArgumentList "install", "--quiet" -Wait
 
-            Write-Success "✓ Docker Desktop installed"
+            Write-Success "[OK] Docker Desktop installed"
             Write-Warning "SYSTEM RESTART REQUIRED!"
             Write-Info "After restart, run this script again."
 
@@ -147,12 +147,12 @@ if (-not $SkipDockerInstall) {
     try {
         docker version 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            Write-Success "✓ Docker is running"
+            Write-Success "[OK] Docker is running"
         } else {
             throw "Docker not running"
         }
     } catch {
-        Write-Warning "⚠ Docker Desktop is not running"
+        Write-Warning "[WARNING] Docker Desktop is not running"
         Write-Info "Starting Docker Desktop..."
         Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
         Write-Info "Waiting for Docker to start (this may take 30-60 seconds)..."
@@ -163,21 +163,18 @@ if (-not $SkipDockerInstall) {
 
         while ($attempt -lt $maxAttempts -and -not $dockerRunning) {
             Start-Sleep -Seconds 2
-            try {
-                docker version 2>&1 | Out-Null
-                if ($LASTEXITCODE -eq 0) {
-                    $dockerRunning = $true
-                }
-            } catch {
-                $attempt++
-                Write-Host "." -NoNewline
+            $attempt++
+            Write-Host "." -NoNewline
+            $result = docker version 2>&1
+            if ($LASTEXITCODE -eq 0) {
+                $dockerRunning = $true
             }
         }
 
         if ($dockerRunning) {
-            Write-Success "`n✓ Docker started successfully"
+            Write-Success "`n[OK] Docker started successfully"
         } else {
-            Write-Error "`n✗ Docker failed to start"
+            Write-Error "`n[FAILED] Docker failed to start"
             Write-Info "Please start Docker Desktop manually and run this script again"
             exit 1
         }
@@ -186,83 +183,24 @@ if (-not $SkipDockerInstall) {
     Write-Warning "Skipping Docker installation check..."
 }
 
-# Step 4: Install NVIDIA Container Toolkit in WSL
+# Step 4: Verify GPU support
 Write-Info ""
-Write-Info "[4/7] Installing NVIDIA Container Toolkit in WSL..."
-Write-Info "This will run commands in WSL Ubuntu..."
+Write-Info "[4/5] Verifying GPU support in Docker..."
+Write-Info "Testing NVIDIA runtime (Docker Desktop handles GPU passthrough natively)..."
 
-$wslCommands = @"
-#!/bin/bash
-set -e
-
-echo 'Updating package lists...'
-sudo apt-get update -qq
-
-echo 'Installing prerequisites...'
-sudo apt-get install -y -qq curl gnupg
-
-echo 'Configuring NVIDIA Container Toolkit repository...'
-distribution=\$(. /etc/os-release;echo \$ID\$VERSION_ID)
-curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-
-curl -s -L https://nvidia.github.io/libnvidia-container/\$distribution/libnvidia-container.list | \
-    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-
-echo 'Installing NVIDIA Container Toolkit...'
-sudo apt-get update -qq
-sudo apt-get install -y -qq nvidia-container-toolkit
-
-echo 'Configuring Docker runtime...'
-sudo nvidia-ctk runtime configure --runtime=docker
-
-echo 'NVIDIA Container Toolkit installed successfully'
-"@
-
-try {
-    $wslCommands | wsl bash
-    Write-Success "✓ NVIDIA Container Toolkit installed in WSL"
-} catch {
-    Write-Error "Failed to install NVIDIA Container Toolkit: $_"
-    Write-Warning "You may need to install it manually in WSL"
-}
-
-# Step 5: Restart Docker
-Write-Info ""
-Write-Info "[5/7] Restarting Docker..."
-try {
-    # Restart Docker Desktop using Windows service
-    Write-Info "Stopping Docker..."
-    Stop-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue -Force
-    Start-Sleep -Seconds 5
-
-    Write-Info "Starting Docker..."
-    Start-Process "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-    Start-Sleep -Seconds 20
-
-    Write-Success "✓ Docker restarted"
-} catch {
-    Write-Warning "Could not restart Docker automatically. Please restart Docker Desktop manually."
-}
-
-# Step 6: Verify GPU support
-Write-Info ""
-Write-Info "[6/7] Verifying GPU support in Docker..."
-Write-Info "Testing NVIDIA runtime..."
-
-$maxRetries = 5
+$maxRetries = 3
 $retry = 0
 $testPassed = $false
 
 while ($retry -lt $maxRetries -and -not $testPassed) {
     try {
         Write-Info "Attempt $($retry + 1)/$maxRetries..."
-        docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi 2>&1 | Out-Null
+        $gpuTest = docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi 2>&1
         if ($LASTEXITCODE -eq 0) {
             $testPassed = $true
-            Write-Success "✓ GPU support verified! Docker can access your NVIDIA GPU"
+            Write-Success "[OK] GPU support verified! Docker can access your NVIDIA GPU"
         } else {
-            throw "Test failed"
+            throw "Test failed: $gpuTest"
         }
     } catch {
         $retry++
@@ -274,11 +212,13 @@ while ($retry -lt $maxRetries -and -not $testPassed) {
 }
 
 if (-not $testPassed) {
-    Write-Error "✗ GPU test failed"
+    Write-Error "[FAILED] GPU test failed"
     Write-Warning "Docker cannot access the GPU. Please check:"
     Write-Info "  1. Docker Desktop is running with WSL 2 backend enabled"
-    Write-Info "  2. NVIDIA drivers are up to date (472.12+)"
-    Write-Info "  3. Try restarting your computer"
+    Write-Info "  2. In Docker Desktop Settings > Resources > WSL Integration - enable your distro"
+    Write-Info "  3. NVIDIA drivers are up to date (472.12+)"
+    Write-Info "  4. Try restarting Docker Desktop and your computer"
+    exit 1
 } else {
     # Show GPU info
     Write-Info ""
@@ -286,9 +226,9 @@ if (-not $testPassed) {
     docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
 }
 
-# Step 7: Build the SmartChairCounter image
+# Step 5: Build the SmartChairCounter image
 Write-Info ""
-Write-Info "[7/7] Building SmartChairCounter Docker image..."
+Write-Info "[5/5] Building SmartChairCounter Docker image..."
 $projectPath = $PSScriptRoot
 
 if (Test-Path "$projectPath\docker-compose.yml") {
@@ -296,21 +236,21 @@ if (Test-Path "$projectPath\docker-compose.yml") {
 
     Set-Location $projectPath
 
-    Write-Info "This may take 10-20 minutes on first build..."
-    docker-compose build
+    Write-Info "This may take several minutes on first build..."
+    docker compose build
 
     if ($LASTEXITCODE -eq 0) {
-        Write-Success "✓ Image built successfully!"
+        Write-Success "[OK] Image built successfully!"
         Write-Info ""
         Write-Info "========================================"
         Write-Success "Setup Complete!"
         Write-Info "========================================"
         Write-Info ""
         Write-Info "To start the application, run:"
-        Write-Success "  docker-compose up -d"
+        Write-Success "  docker compose up -d"
         Write-Info ""
         Write-Info "To view logs:"
-        Write-Success "  docker-compose logs -f"
+        Write-Success "  docker compose logs -f"
         Write-Info ""
         Write-Info "To check GPU usage:"
         Write-Success "  docker exec smartchair-counter nvidia-smi"
@@ -321,7 +261,7 @@ if (Test-Path "$projectPath\docker-compose.yml") {
 
         $response = Read-Host "Do you want to start the application now? (Y/N)"
         if ($response -eq 'Y' -or $response -eq 'y') {
-            docker-compose up -d
+            docker compose up -d
             Start-Sleep -Seconds 5
             Write-Success "Application started!"
             Write-Info "Opening browser..."
@@ -338,4 +278,4 @@ if (Test-Path "$projectPath\docker-compose.yml") {
 }
 
 Write-Info ""
-Write-Success "All done! 🎉"
+Write-Success "All done!"
