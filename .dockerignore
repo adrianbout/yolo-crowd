@@ -1,0 +1,64 @@
+# Environment files (sensitive)
+.env
+.env.*
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+smartchair.log
+
+# Temporary files
+*.tmp
+nul
+run.txt
+test_api.py
+
+# Test videos (optional - remove if you need them in the container)
+v.mp4
+v2.mp4
+v3.mp4
+v4.mp4
+*.mp4
+videos/
+
+# Docker tar exports
+*.tar
+chaircounter-*.tar
+
+# Test images
+1.jpg
+2.png
+1_detected.jpg
+
+# Runs directory (can be regenerated)
+runs/
+
+# Backup
+backup/
+
+# Claude files
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db

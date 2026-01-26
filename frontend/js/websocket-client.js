@@ -201,7 +201,8 @@ let wsClient = null;
 
 // Initialize WebSocket client
 function initWebSocket() {
-    const wsUrl = 'ws://localhost:8000/api/ws';
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
     wsClient = new WebSocketClient(wsUrl);
     wsClient.connect();
 }

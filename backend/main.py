@@ -10,6 +10,8 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import logging
 import asyncio
+import os
+import httpx
 from contextlib import asynccontextmanager
 
 from services.state_manager import StateManager
@@ -34,6 +36,15 @@ if not VERBOSE_LOGGING:
 # Global instances
 state_manager = StateManager(config_dir="config")
 detection_service = DetectionService(state_manager, batch_size=1, inference_interval=0.0)
+
+# External API configuration
+EXTERNAL_API_URL = os.getenv("API_URL")
+EXTERNAL_API_KEY = os.getenv("API_KEY")
+EXTERNAL_API_INTERVAL = int(os.getenv("API_INTERVAL", "30"))  # Send every 30 seconds by default
+
+# Track last sent value to avoid duplicate calls
+_last_sent_empty_chairs = None
+_last_api_call_time = 0
 
 
 @asynccontextmanager
@@ -186,18 +197,66 @@ async def get_system_status():
     }
 
 
+# Function to send empty chairs to external API
+async def send_to_external_api(empty_chairs: int) -> bool:
+    """Send empty chairs count to external API"""
+    global _last_sent_empty_chairs
+
+    if not EXTERNAL_API_URL or not EXTERNAL_API_KEY:
+        return False
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.patch(
+                EXTERNAL_API_URL,
+                headers={"X-API-KEY": EXTERNAL_API_KEY},
+                data={"empty_chairs": empty_chairs}
+            )
+
+            if response.status_code == 200:
+                _last_sent_empty_chairs = empty_chairs
+                logger.info(f"External API: Sent empty_chairs={empty_chairs} to {EXTERNAL_API_URL}")
+                return True
+            else:
+                logger.warning(f"External API: Failed with status {response.status_code}: {response.text}")
+                return False
+
+    except Exception as e:
+        logger.error(f"External API: Error sending data: {e}")
+        return False
+
+
 # Background task for broadcasting updates
 async def broadcast_task():
-    """Periodically broadcast count updates to WebSocket clients"""
+    """Periodically broadcast count updates to WebSocket clients and external API"""
+    global _last_api_call_time, _last_sent_empty_chairs
+
     logger.info("Starting broadcast task...")
+
+    if EXTERNAL_API_URL:
+        logger.info(f"External API enabled: {EXTERNAL_API_URL} (interval: {EXTERNAL_API_INTERVAL}s)")
+    else:
+        logger.info("External API not configured (set API_URL and API_KEY env vars to enable)")
+
+    api_call_counter = 0
 
     while detection_service.running:
         try:
             await asyncio.sleep(1)  # Broadcast every second
 
-            # Broadcast count update
+            # Broadcast count update to WebSocket clients
             if len(websocket.manager.active_connections) > 0:
                 await websocket.broadcast_count_update(state_manager)
+
+            # Send to external API periodically
+            api_call_counter += 1
+            if EXTERNAL_API_URL and api_call_counter >= EXTERNAL_API_INTERVAL:
+                api_call_counter = 0
+                total_empty_chairs = state_manager.get_total_empty_chairs()
+
+                # Only send if value changed or first time
+                if total_empty_chairs != _last_sent_empty_chairs:
+                    await send_to_external_api(total_empty_chairs)
 
         except Exception as e:
             logger.error(f"Error in broadcast task: {e}")

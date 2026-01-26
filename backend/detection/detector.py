@@ -301,14 +301,14 @@ class YOLODetector:
         # then filter per-camera. This ensures we don't miss detections.
         if isinstance(results, tuple):
             if CUSTOM_YOLO_AVAILABLE:
-                # Find minimum thresholds across all cameras for initial NMS
+                # Find minimum confidence (keep more detections) and maximum IOU (less aggressive suppression)
                 min_conf = min(cfg.get("confidence_threshold", self.confidence_threshold) for cfg in inference_configs)
-                min_iou = min(cfg.get("iou_threshold", self.iou_threshold) for cfg in inference_configs)
+                max_iou = max(cfg.get("iou_threshold", self.iou_threshold) for cfg in inference_configs)
 
                 pred = non_max_suppression(
                     pred,
                     conf_thres=min_conf,
-                    iou_thres=min_iou
+                    iou_thres=max_iou
                 )
 
         # Parse results
