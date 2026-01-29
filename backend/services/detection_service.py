@@ -311,19 +311,24 @@ class DetectionService:
         if draw_rois:
             frame = self.roi_filter.draw_rois_on_frame(frame, camera_id)
 
-        # Draw detections
-        detections = self.get_current_detections(camera_id)
-        for det in detections:
-            bbox = det["bbox"]
-            x1, y1, x2, y2 = map(int, bbox)
-            conf = det["confidence"]
+        # Check if show_boxes is enabled for this camera (default True)
+        camera_config = self.state_manager.get_camera_config(camera_id)
+        show_boxes = camera_config.get("show_boxes", True) if camera_config else True
 
-            # Draw bounding box
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Draw detections only if show_boxes is enabled
+        if show_boxes:
+            detections = self.get_current_detections(camera_id)
+            for det in detections:
+                bbox = det["bbox"]
+                x1, y1, x2, y2 = map(int, bbox)
+                conf = det["confidence"]
 
-            # Draw confidence
-            label = f"{conf:.2f}"
-            cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Draw bounding box
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                # Draw confidence
+                label = f"{conf:.2f}"
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
         # Encode as JPEG
         _, buffer = cv2.imencode('.jpg', frame)

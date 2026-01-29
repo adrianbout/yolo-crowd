@@ -76,6 +76,7 @@ class CameraUpdate(BaseModel):
     position: Optional[CameraPosition] = None
     totalChairs: Optional[int] = None  # Total chairs available for empty chairs calculation
     detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
+    show_boxes: Optional[bool] = None  # Show detection bounding boxes on video feed
 
 
 @router.get("/cameras")
@@ -229,6 +230,10 @@ async def update_camera(
     if "detection_settings" in camera.__fields_set__:
         existing["detection_settings"] = camera.detection_settings.dict() if camera.detection_settings else None
 
+    # Handle show_boxes setting
+    if camera.show_boxes is not None:
+        existing["show_boxes"] = camera.show_boxes
+
     # Save to file
     _save_cameras_config(state_manager)
 
@@ -252,6 +257,28 @@ async def delete_camera(
             _save_cameras_config(state_manager)
             logger.info(f"Deleted camera: {camera_id}")
             return {"status": "ok", "message": f"Camera {deleted['name']} deleted. Restart server to apply."}
+
+    raise HTTPException(status_code=404, detail="Camera not found")
+
+
+@router.put("/cameras/{camera_id}/show-boxes")
+async def toggle_show_boxes(
+    camera_id: str,
+    state_manager = Depends(get_state_manager)
+) -> Dict:
+    """Toggle show_boxes setting for a camera"""
+    cameras_list = state_manager.cameras.get("cameras", [])
+
+    for camera in cameras_list:
+        if camera["id"] == camera_id:
+            # Toggle or default to False if not set
+            current_value = camera.get("show_boxes", True)
+            camera["show_boxes"] = not current_value
+
+            _save_cameras_config(state_manager)
+
+            logger.info(f"Toggled show_boxes for {camera_id}: {camera['show_boxes']}")
+            return {"status": "ok", "show_boxes": camera["show_boxes"]}
 
     raise HTTPException(status_code=404, detail="Camera not found")
 
