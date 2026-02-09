@@ -2,7 +2,7 @@
   "cameras": [
     {
       "id": "cam_003",
-      "name": "Camera 3 - Video",
+      "name": "Video",
       "type": "rgb",
       "enabled": true,
       "connection": {
@@ -21,41 +21,8 @@
       },
       "detection_settings": {
         "detection_model": "rgb",
-        "confidence_threshold": 0.25,
-        "iou_threshold": 0.45,
-        "img_size": 320,
-        "preprocessing": "none",
-        "blob_threshold": 200,
-        "blob_min_area": 2000,
-        "blob_max_area": 50000,
-        "blob_aspect_ratio_min": 0.5,
-        "blob_aspect_ratio_max": 3.0
-      },
-      "totalChairs": 3
-    },
-    {
-      "id": "cam_004",
-      "name": "Camera 4 - Video",
-      "type": "rgb",
-      "enabled": true,
-      "connection": {
-        "ip": "localhost",
-        "rtsp_port": 554,
-        "http_port": 80,
-        "username": "",
-        "password": "",
-        "rtsp_url": "v4.mp4",
-        "isapi_base": ""
-      },
-      "profile": "rgb_default",
-      "position": {
-        "description": "Video file v4.mp4",
-        "floor": 1
-      },
-      "detection_settings": {
-        "detection_model": "thermal",
-        "confidence_threshold": 0.25,
-        "iou_threshold": 0.45,
+        "confidence_threshold": 0.2,
+        "iou_threshold": 0.75,
         "img_size": 640,
         "preprocessing": "none",
         "blob_threshold": 200,
@@ -64,7 +31,30 @@
         "blob_aspect_ratio_min": 0.5,
         "blob_aspect_ratio_max": 3.0
       },
-      "totalChairs": 5
+      "totalChairs": 5,
+      "show_boxes": true
+    },
+    {
+      "id": "cam_002",
+      "name": "v22.mp4",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "",
+        "rtsp_url": "v22.mp4",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "v22.mp4",
+        "floor": 1
+      },
+      "totalChairs": 0,
+      "detection_settings": null
     }
   ],
   "global_settings": {
