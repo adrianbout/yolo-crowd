@@ -1,2 +1,51 @@
 python detect.py --weights weights/yolo-crowd.pt --source rtsp://localhost:8554/camera2_thermal_201 --img-size 608 --view-img
-python detect.py --weights weights/yolo-crowd.pt --source v.mp4 --img-size 608 --view-img
+python detect.py --weights weights/yolo-crowd.pt --source v4.mp4 --img-size 608 --view-img
+
+
+img_size	Speed	Accuracy	Use Case
+320	Fastest	Lower	Real-time, many cameras
+480	Fast	Good	Balanced (current)
+640	Medium	Better	Standard YOLOv5 default
+1280	Slow	Best	High accuracy needed
+
+
+/Streaming/Channels/101 - Channel 1, Main stream
+/Streaming/Channels/102 - Channel 1, Sub stream
+/Streaming/Channels/201 - Channel 2, Main stream
+/Streaming/Channels/202 - Channel 2, Sub stream
+
+docker build -t chaircounter:v1.0.7 .
+docker save -o chaircounter-v1.0.7.tar chaircounter:v1.0.7
+docker load -i chaircounter-v1.0.7.tar
+
+
+
+Johara_Room_1:
+
+Setting	Value
+Container name	Johara_Room_1
+Host port	8001
+Container port	:8000/tcp
+Volumes	
+Host	D:\Paradox\Chair Project\SmartChairCounter\yolo-crowd\config
+Container	/app/config
+Environment variables	
+API_URL	https://chairs.craftparadox.net/api/v1.0/rooms/1/
+API_KEY	fDJO5YNp8vB43cwpJHHfI277Iau0BmxA
+API_INTERVAL	30
+Access: http://localhost:8001/frontend/index.html
+
+Johara_Room_2:
+
+Setting	Value
+Container name	Johara_Room_2
+Host port	8002
+Container port	:8000/tcp
+Volumes	
+Host	D:\Paradox\Chair Project\SmartChairCounter\yolo-crowd\config-room2
+Container	/app/config
+Environment variables	
+API_URL	https://chairs.craftparadox.net/api/v1.0/rooms/2/
+API_KEY	fDJO5YNp8vB43cwpJHHfI277Iau0BmxA
+API_INTERVAL	30
+Access: http://localhost:8002/frontend/index.html
