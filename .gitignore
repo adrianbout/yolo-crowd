@@ -161,3 +161,10 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 chaircounter-v1.0.9.tar
+weights/yolo11m-pose.pt
+*.mp4
+.gitignore
+run.txt
+notes.txt
+run.txt
+test_api.py
