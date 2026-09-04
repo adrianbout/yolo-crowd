@@ -73,10 +73,12 @@ class DetectionService:
         detection_settings = self.state_manager.get_detection_settings()
         model_path = detection_settings.get("model_path", "weights/yolo-crowd.pt")
         thermal_model_path = detection_settings.get("thermal_model_path", "weights/yolo-thermal-approche2.pt")
+        pose_model_path = detection_settings.get("pose_model_path", "weights/yolo11m-pose.pt")
 
         self.detector_factory = DetectorFactory(
             rgb_model_path=model_path,
             thermal_model_path=thermal_model_path,
+            pose_model_path=pose_model_path,
             device=detection_settings.get("device", "cuda"),
             half_precision=detection_settings.get("half_precision", True),
             default_confidence=detection_settings.get("confidence_threshold", 0.25),
@@ -323,12 +325,32 @@ class DetectionService:
                 x1, y1, x2, y2 = map(int, bbox)
                 conf = det["confidence"]
 
-                # Draw bounding box
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                # Posture tag is only present for the pose detector; non-pose
+                # cameras render exactly as before (green box, conf label).
+                posture = det.get("posture")
+                if posture == "sitting":
+                    color = (0, 255, 0)      # green
+                    label = f"sitting {conf:.2f}"
+                elif posture == "standing":
+                    color = (0, 165, 255)    # orange (BGR)
+                    label = f"standing {conf:.2f}"
+                elif posture is not None:
+                    color = (0, 255, 255)    # yellow for unknown posture
+                    label = f"? {conf:.2f}"
+                else:
+                    color = (0, 255, 0)
+                    label = f"{conf:.2f}"
 
-                # Draw confidence
-                label = f"{conf:.2f}"
-                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                # Pose detector only: show the stable per-person track ID
+                track_id = det.get("track_id")
+                if track_id is not None:
+                    label = f"#{track_id} {label}"
+
+                # Draw bounding box
+                cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+
+                # Draw label
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         # Encode as JPEG
         _, buffer = cv2.imencode('.jpg', frame)

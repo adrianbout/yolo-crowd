@@ -41,7 +41,7 @@ class CameraPosition(BaseModel):
 
 class CameraDetectionSettings(BaseModel):
     """Per-camera detection settings override"""
-    detection_model: str = "rgb"  # rgb, thermal, blob_hotspot
+    detection_model: str = "rgb"  # rgb, thermal, blob_hotspot, pose
     confidence_threshold: float = 0.25
     iou_threshold: float = 0.45
     img_size: int = 640

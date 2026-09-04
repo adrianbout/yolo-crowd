@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  smartchair:
+    image: smartchair-counter:1.0.9  # Use pre-built image instead of building
+    container_name: smartchair-counter
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount config directory for camera settings
+      - ./config:/app/config
+      # Mount weights directory for YOLO models
+      - ./weights:/app/weights
+      # Mount logs directory
+      - ./logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+      - PORT=8000
+    restart: unless-stopped
+
+# For GPU support (requires NVIDIA Docker runtime):
+# Uncomment the deploy section below
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - driver: nvidia
+#              count: 1
+#              capabilities: [gpu]

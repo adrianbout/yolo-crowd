@@ -34,10 +34,13 @@ logger = logging.getLogger(__name__)
 class Detection:
     """Single detection result"""
 
-    def __init__(self, bbox: List[float], confidence: float, class_id: int):
+    def __init__(self, bbox: List[float], confidence: float, class_id: int,
+                 posture: Optional[str] = None, track_id: Optional[int] = None):
         self.bbox = bbox  # [x1, y1, x2, y2]
         self.confidence = confidence
         self.class_id = class_id
+        self.posture = posture  # "sitting" | "standing" | "unknown" | None (non-pose detectors)
+        self.track_id = track_id  # stable per-person ID (pose detector only) | None
         self.center = self._calculate_center()
 
     def _calculate_center(self) -> Tuple[float, float]:
@@ -47,12 +50,18 @@ class Detection:
 
     def to_dict(self) -> Dict:
         """Convert to dictionary"""
-        return {
+        d = {
             "bbox": self.bbox,
             "confidence": float(self.confidence),
             "class_id": int(self.class_id),
             "center": self.center
         }
+        # Only include posture/track_id when set (pose detector); keeps non-pose output unchanged
+        if self.posture is not None:
+            d["posture"] = self.posture
+        if self.track_id is not None:
+            d["track_id"] = int(self.track_id)
+        return d
 
 
 class YOLODetector:

@@ -10,6 +10,7 @@ import numpy as np
 from .detector import YOLODetector, Detection
 from .thermal_detector import ThermalYOLODetector
 from .blob_hotspot_detector import BlobHotspotDetector
+from .pose_detector import PoseYOLODetector
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +25,7 @@ class DetectorFactory:
         self,
         rgb_model_path: str = "weights/yolo-crowd.pt",
         thermal_model_path: str = "weights/yolo-thermal-approche2.pt",
+        pose_model_path: str = "weights/yolo11m-pose.pt",
         device: str = "cuda",
         half_precision: bool = True,
         default_confidence: float = 0.25,
@@ -40,6 +42,7 @@ class DetectorFactory:
         self.rgb_detector: Optional[YOLODetector] = None
         self.thermal_detector: Optional[ThermalYOLODetector] = None
         self.blob_hotspot_detector: Optional[BlobHotspotDetector] = None
+        self.pose_detector: Optional[PoseYOLODetector] = None
 
         # Track per-camera model selection (set via detection_settings.detection_model)
         self.camera_models: Dict[str, str] = {}
@@ -74,6 +77,20 @@ class DetectorFactory:
         logger.info("Initializing Blob Hotspot detector...")
         self.blob_hotspot_detector = BlobHotspotDetector()
 
+        # Initialize Pose detector (YOLOv11-pose, posture tagging)
+        logger.info("Initializing Pose detector...")
+        try:
+            self.pose_detector = PoseYOLODetector(
+                model_path=pose_model_path,
+                device=device,
+                confidence_threshold=default_confidence,
+                iou_threshold=default_iou,
+                img_size=default_img_size
+            )
+        except FileNotFoundError as e:
+            logger.warning(f"Pose model not found: {e}. Pose option will fall back to RGB detector.")
+            self.pose_detector = None
+
         logger.info("DetectorFactory initialized successfully")
 
     def register_camera_model(self, camera_id: str, detection_model: str):
@@ -100,6 +117,8 @@ class DetectorFactory:
             return self.thermal_detector
         elif model == "blob_hotspot" and self.blob_hotspot_detector:
             return self.blob_hotspot_detector
+        elif model == "pose" and self.pose_detector:
+            return self.pose_detector
         return self.rgb_detector
 
     def detect_batch(
@@ -126,6 +145,7 @@ class DetectorFactory:
         rgb_indices = []
         thermal_indices = []
         blob_indices = []
+        pose_indices = []
 
         for idx, camera_id in enumerate(camera_ids):
             model = self.camera_models.get(camera_id, "rgb")
@@ -133,6 +153,8 @@ class DetectorFactory:
                 thermal_indices.append(idx)
             elif model == "blob_hotspot" and self.blob_hotspot_detector:
                 blob_indices.append(idx)
+            elif model == "pose" and self.pose_detector:
+                pose_indices.append(idx)
             else:
                 rgb_indices.append(idx)
 
@@ -182,6 +204,21 @@ class DetectorFactory:
                 preprocessing_configs=blob_preprocessing_configs
             )
             all_detections.update(blob_detections)
+
+        # Process Pose frames
+        if pose_indices and self.pose_detector:
+            pose_frames = [frames[i] for i in pose_indices]
+            pose_camera_ids = [camera_ids[i] for i in pose_indices]
+            pose_inference_configs = [inference_configs[i] for i in pose_indices]
+            pose_preprocessing_configs = [preprocessing_configs[i] for i in pose_indices] if preprocessing_configs else None
+
+            pose_detections = self.pose_detector.detect_batch(
+                frames=pose_frames,
+                camera_ids=pose_camera_ids,
+                inference_configs=pose_inference_configs,
+                preprocessing_configs=pose_preprocessing_configs
+            )
+            all_detections.update(pose_detections)
 
         return all_detections
 

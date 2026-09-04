@@ -55,6 +55,87 @@
       },
       "totalChairs": 0,
       "detection_settings": null
+    },
+    {
+      "id": "cam_004",
+      "name": "Camera",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "217.165.121.105",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "admin",
+        "password": "gns@2014",
+        "rtsp_url": "rtsp://admin:gns@2014@217.165.121.105:554/Streaming/Channels/102",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "",
+        "floor": 1
+      },
+      "totalChairs": 0,
+      "detection_settings": null,
+      "show_boxes": true
+    },
+    {
+      "id": "cam_test_1",
+      "name": "video_test (Pose)",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "",
+        "password": "",
+        "rtsp_url": "video_test.mp4",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video with posture detection",
+        "floor": 1
+      },
+      "detection_settings": {
+        "detection_model": "pose",
+        "confidence_threshold": 0.12,
+        "iou_threshold": 0.5,
+        "img_size": 1920,
+        "preprocessing": "none"
+      },
+      "totalChairs": 0,
+      "show_boxes": true
+    },
+    {
+      "id": "cam_test_2",
+      "name": "video_test_2",
+      "type": "rgb",
+      "enabled": true,
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "",
+        "password": "",
+        "rtsp_url": "video_test_2.mp4",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Test video 2",
+        "floor": 1
+      },
+      "detection_settings": {
+        "detection_model": "rgb",
+        "confidence_threshold": 0.25,
+        "iou_threshold": 0.45,
+        "img_size": 640,
+        "preprocessing": "none"
+      },
+      "totalChairs": 0,
+      "show_boxes": true
     }
   ],
   "global_settings": {
