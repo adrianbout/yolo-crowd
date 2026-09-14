@@ -1,134 +1,117 @@
 {
   "cameras": [
     {
-      "id": "cam_003",
-      "name": "Video",
+      "id": "cam_hall_1",
+      "name": "Hallway 1",
       "type": "rgb",
       "enabled": true,
+      "role": "flow",
       "connection": {
         "ip": "localhost",
         "rtsp_port": 554,
         "http_port": 80,
         "username": "",
         "password": "",
-        "rtsp_url": "v3.mp4",
+        "rtsp_url": "hallways (1).mp4",
         "isapi_base": ""
       },
       "profile": "rgb_default",
       "position": {
-        "description": "Video file v3.mp4",
+        "description": "Hallway 1 - 1280x720, 25 fps",
         "floor": 1
       },
       "detection_settings": {
-        "detection_model": "rgb",
-        "confidence_threshold": 0.2,
-        "iou_threshold": 0.75,
+        "detection_model": "yolo26",
+        "confidence_threshold": 0.25,
+        "iou_threshold": 0.45,
         "img_size": 640,
-        "preprocessing": "none",
-        "blob_threshold": 200,
-        "blob_min_area": 2000,
-        "blob_max_area": 50000,
-        "blob_aspect_ratio_min": 0.5,
-        "blob_aspect_ratio_max": 3.0
-      },
-      "totalChairs": 5,
-      "show_boxes": true
-    },
-    {
-      "id": "cam_002",
-      "name": "v22.mp4",
-      "type": "rgb",
-      "enabled": true,
-      "connection": {
-        "ip": "localhost",
-        "rtsp_port": 554,
-        "http_port": 80,
-        "username": "admin",
-        "password": "",
-        "rtsp_url": "v22.mp4",
-        "isapi_base": ""
-      },
-      "profile": "rgb_default",
-      "position": {
-        "description": "v22.mp4",
-        "floor": 1
-      },
-      "totalChairs": 0,
-      "detection_settings": null
-    },
-    {
-      "id": "cam_004",
-      "name": "Camera",
-      "type": "rgb",
-      "enabled": true,
-      "connection": {
-        "ip": "217.165.121.105",
-        "rtsp_port": 554,
-        "http_port": 80,
-        "username": "admin",
-        "password": "gns@2014",
-        "rtsp_url": "rtsp://admin:gns@2014@217.165.121.105:554/Streaming/Channels/102",
-        "isapi_base": ""
-      },
-      "profile": "rgb_default",
-      "position": {
-        "description": "",
-        "floor": 1
-      },
-      "totalChairs": 0,
-      "detection_settings": null,
-      "show_boxes": true
-    },
-    {
-      "id": "cam_test_1",
-      "name": "video_test (Pose)",
-      "type": "rgb",
-      "enabled": true,
-      "connection": {
-        "ip": "localhost",
-        "rtsp_port": 554,
-        "http_port": 80,
-        "username": "",
-        "password": "",
-        "rtsp_url": "video_test.mp4",
-        "isapi_base": ""
-      },
-      "profile": "rgb_default",
-      "position": {
-        "description": "Test video with posture detection",
-        "floor": 1
-      },
-      "detection_settings": {
-        "detection_model": "pose",
-        "confidence_threshold": 0.12,
-        "iou_threshold": 0.5,
-        "img_size": 1920,
         "preprocessing": "none"
       },
       "totalChairs": 0,
       "show_boxes": true
     },
     {
-      "id": "cam_test_2",
-      "name": "video_test_2",
+      "id": "cam_hall_2",
+      "name": "Hallway 2",
       "type": "rgb",
       "enabled": true,
+      "role": "flow",
       "connection": {
         "ip": "localhost",
         "rtsp_port": 554,
         "http_port": 80,
         "username": "",
         "password": "",
-        "rtsp_url": "video_test_2.mp4",
+        "rtsp_url": "hallways (2).mp4",
         "isapi_base": ""
       },
       "profile": "rgb_default",
       "position": {
-        "description": "Test video 2",
+        "description": "Hallway 2 - 1280x720, 25 fps",
         "floor": 1
       },
       "detection_settings": {
-        "detection_model": "rgb",
+        "detection_model": "yolo26",
+        "confidence_threshold": 0.25,
+        "iou_threshold": 0.45,
+        "img_size": 640,
+        "preprocessing": "none"
+      },
+      "totalChairs": 0,
+      "show_boxes": true
+    },
+    {
+      "id": "cam_hall_3",
+      "name": "Hallway 3",
+      "type": "rgb",
+      "enabled": true,
+      "role": "flow",
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "",
+        "password": "",
+        "rtsp_url": "hallways (3).mp4",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Hallway 3 - 720x1280 portrait, 30 fps",
+        "floor": 1
+      },
+      "detection_settings": {
+        "detection_model": "yolo26",
+        "confidence_threshold": 0.25,
+        "iou_threshold": 0.45,
+        "img_size": 640,
+        "preprocessing": "none"
+      },
+      "totalChairs": 0,
+      "show_boxes": true
+    },
+    {
+      "id": "cam_hall_4",
+      "name": "Hallway 4",
+      "type": "rgb",
+      "enabled": true,
+      "role": "flow",
+      "connection": {
+        "ip": "localhost",
+        "rtsp_port": 554,
+        "http_port": 80,
+        "username": "",
+        "password": "",
+        "rtsp_url": "hallways (4).mp4",
+        "isapi_base": ""
+      },
+      "profile": "rgb_default",
+      "position": {
+        "description": "Hallway 4 - 1280x720, 25 fps",
+        "floor": 1
+      },
+      "detection_settings": {
+        "detection_model": "yolo26",
         "confidence_threshold": 0.25,
         "iou_threshold": 0.45,
         "img_size": 640,
@@ -139,6 +122,7 @@
     }
   ],
   "global_settings": {
+    "fps_target": 15,
     "max_cameras": 20,
     "reconnect_attempts": 3,
     "reconnect_delay_seconds": 5,

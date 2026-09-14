@@ -16,6 +16,9 @@ sys.path.append(str(Path(__file__).parent.parent))
 from detection.detector import YOLODetector, DetectionAggregator
 from detection.detector_factory import DetectorFactory
 from detection.roi_filter import ROIFilter
+from detection.heatmap import HeatmapManager
+from services.floorplan import FloorPlan
+from services.node_identity import NodeIdentity
 from camera_control.camera_stream import CameraStreamManager
 from services.state_manager import StateManager
 
@@ -42,12 +45,20 @@ class DetectionService:
         self.inference_interval = inference_interval
         self.frame_skip = 0  # Number of frames to skip between processing
 
+        # Identity, config versioning and per-camera tracker sessions
+        self.node = NodeIdentity(config_dir=str(state_manager.config_dir))
+
         # Components
         self.camera_manager: Optional[CameraStreamManager] = None
         self.detector: Optional[YOLODetector] = None
         self.detector_factory: Optional[DetectorFactory] = None
         self.roi_filter: ROIFilter = ROIFilter()
         self.aggregator: DetectionAggregator = DetectionAggregator()
+        # Flow cameras only; seating zones have a capacity, not a traffic pattern
+        self.heatmaps: HeatmapManager = HeatmapManager()
+        # Ties each camera's view to a shared plan, so flow can be read across
+        # the building rather than one rectangle at a time.
+        self.floorplan: FloorPlan = FloorPlan(config_dir=str(state_manager.config_dir))
 
         # Service state
         self.running = False
@@ -216,6 +227,15 @@ class DetectionService:
                 # Apply ROI filtering
                 filtered_detections = self.roi_filter.filter_detections_batch(detections_by_camera)
 
+                # Accumulate flow-zone heatmaps from the same filtered detections
+                # the counts come from, so the two can never disagree.
+                for cam_id, dets in filtered_detections.items():
+                    if self.get_camera_role(cam_id) != "flow":
+                        continue
+                    frame = frames_dict.get(cam_id)
+                    if frame is not None:
+                        self.heatmaps.update(cam_id, dets, frame.shape)
+
                 # Update counts
                 counts = {cam_id: len(dets) for cam_id, dets in filtered_detections.items()}
                 self.state_manager.update_counts_batch(counts)
@@ -276,6 +296,88 @@ class DetectionService:
             return history[-1].get("detections", [])
         return []
 
+    def switch_camera_model(self, camera_id: str, detection_model: str):
+        """
+        Point a camera at a different detector while running.
+
+        Every detector is already resident in the factory, so this is a
+        routing change rather than a model load - no restart, and detection
+        continues on the next batch.
+
+        Switching discards the camera's tracker state, so the session is
+        restarted: track IDs either side of a switch belong to different runs
+        and must never be joined. The config version moves too, marking the
+        boundary in stored rows.
+        """
+        if not self.detector_factory:
+            logger.warning(f"Cannot switch model for {camera_id}: factory not initialized")
+            return
+
+        self.detector_factory.register_camera_model(camera_id, detection_model)
+        self.node.new_session_id(camera_id, reason=f"model switched to {detection_model}")
+        self.node.bump_config_version(reason=f"{camera_id} model -> {detection_model}")
+
+    def get_camera_role(self, camera_id: str) -> str:
+        """Role for a camera - its own if set, otherwise the node default."""
+        return self.node.resolve_role(self.state_manager.get_camera_config(camera_id))
+
+    def get_heatmap(self, camera_id: str) -> Optional[Dict]:
+        """
+        A flow camera's accumulated heatmap, or None.
+
+        Returns None for seating cameras rather than an empty grid, so the
+        dashboard can tell "no traffic yet" apart from "not a flow zone".
+        """
+        if self.get_camera_role(camera_id) != "flow":
+            return None
+        return self.heatmaps.get(camera_id)
+
+    def get_floorplan_heatmap(self) -> Optional[Dict]:
+        """
+        Every calibrated camera's traffic, projected onto the one plan.
+
+        Returns None until a plan exists and at least one camera is
+        calibrated against it - an empty plan and an uncalibrated one are
+        worth telling apart in the UI.
+        """
+        if not self.floorplan.has_image:
+            return None
+        combined = self.floorplan.combined_grid(self.heatmaps.raw_grids())
+        if combined is None:
+            return None
+        # Downsampled on the way out: a full plan-resolution float grid is
+        # megabytes of JSON, and the client draws it scaled anyway.
+        h, w = combined.shape
+        step = max(1, int(max(w, h) / 240))
+        small = combined[::step, ::step]
+        return {
+            "width": int(small.shape[1]),
+            "height": int(small.shape[0]),
+            "plan_width": self.floorplan.width,
+            "plan_height": self.floorplan.height,
+            "cameras": sorted(
+                cid for cid in self.heatmaps.raw_grids()
+                if self.floorplan.is_calibrated(cid)
+            ),
+            "grid": [[round(float(v), 4) for v in row] for row in small],
+        }
+
+    def get_floorplan_detections(self) -> Dict[str, List[Dict]]:
+        """Current detections from every calibrated camera, in plan coordinates."""
+        out = {}
+        for camera_id in list(self.floorplan.calibrations.keys()):
+            if not self.floorplan.is_calibrated(camera_id):
+                continue
+            dets = self.get_current_detections(camera_id)
+            rows = self.floorplan.project_detections(camera_id, dets)
+            if rows:
+                out[camera_id] = rows
+        return out
+
+    def reset_heatmap(self, camera_id: Optional[str] = None):
+        """Clear accumulated traffic - after moving a camera, or re-drawing a gate."""
+        self.heatmaps.reset(camera_id)
+
     def update_roi(self, camera_id: str, roi_config: Dict):
         """
         Update ROI configuration
@@ -291,6 +393,10 @@ class DetectionService:
 
         # Save to file
         self.state_manager.save_rois()
+
+        # Geometry and capacity changes make rows before and after
+        # incomparable, so the version moves with them.
+        self.node.bump_config_version(reason=f"{camera_id} zones edited")
 
         logger.info(f"Updated ROI for camera {camera_id}")
 
@@ -309,12 +415,17 @@ class DetectionService:
         if frame is None:
             return None
 
+        # Heatmap sits under the ROI outlines and boxes so those stay readable
+        camera_config = self.state_manager.get_camera_config(camera_id)
+        show_heatmap = camera_config.get("show_heatmap", True) if camera_config else True
+        if show_heatmap and self.get_camera_role(camera_id) == "flow":
+            frame = self.heatmaps.render_overlay(frame, camera_id)
+
         # Draw ROIs
         if draw_rois:
             frame = self.roi_filter.draw_rois_on_frame(frame, camera_id)
 
         # Check if show_boxes is enabled for this camera (default True)
-        camera_config = self.state_manager.get_camera_config(camera_id)
         show_boxes = camera_config.get("show_boxes", True) if camera_config else True
 
         # Draw detections only if show_boxes is enabled

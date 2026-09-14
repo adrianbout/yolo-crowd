@@ -1112,3 +1112,34 @@ body {
         margin: 5% auto;
     }
 }
+
+/* Link through to the floor plan calibration page.
+   Shaped like .btn-settings so the two icons read as one control group. */
+.btn-map {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #7f8c8d;
+    text-decoration: none;
+}
+
+.btn-map:hover {
+    background-color: #ecf0f1;
+    color: #2c3e50;
+}
+
+.btn-map:focus-visible {
+    outline: 2px solid #3498db;
+    outline-offset: 2px;
+}
+
+.btn-map svg {
+    width: 24px;
+    height: 24px;
+}

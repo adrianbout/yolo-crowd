@@ -1,0 +1,203 @@
+/* Floor plan calibration - matches the dashboard's look */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+}
+
+.container { max-width: 1920px; margin: 0 auto; padding: 20px; }
+
+.header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: white; padding: 20px 30px; border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; gap: 20px;
+}
+.header h1 { font-size: 24px; color: #2c3e50; }
+.header .sub { font-size: 14px; color: #7f8c8d; margin-top: 4px; }
+
+.panel {
+    background: white; border-radius: 10px; padding: 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px;
+}
+
+/* buttons */
+.btn {
+    background: #ecf0f1; color: #2c3e50; border: 1px solid #dfe4e6;
+    padding: 8px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 14px; font-family: inherit; text-decoration: none;
+    display: inline-block; line-height: 1.4;
+}
+.btn:hover:not(:disabled) { background: #e1e7e9; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: #3498db; color: white; border-color: #3498db; }
+.btn.primary:hover:not(:disabled) { background: #2f89c5; }
+.btn.danger { background: #fff; color: #c0392b; border-color: #e6c4bf; }
+.btn.danger:hover:not(:disabled) { background: #fdf3f2; }
+.btn.ghost { background: none; border-color: transparent; color: #3498db; }
+.btn.small { padding: 5px 10px; font-size: 13px; }
+.btn[aria-pressed="true"] { background: #34495e; color: white; border-color: #34495e; }
+.btn:focus-visible { outline: 2px solid #3498db; outline-offset: 2px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* empty state */
+.empty { text-align: center; padding: 60px 20px; }
+.empty h2 { color: #2c3e50; margin-bottom: 10px; }
+.empty p { color: #7f8c8d; margin-bottom: 18px; }
+.hint { color: #95a5a6; font-size: 13px; }
+
+/* toolbar */
+.toolbar { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field.grow { flex: 1 1 240px; }
+.field label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: #95a5a6;
+}
+select {
+    padding: 8px 12px; border: 1px solid #dfe4e6; border-radius: 6px;
+    font-family: inherit; font-size: 14px; background: white; min-width: 220px;
+}
+.status-line { font-size: 14px; color: #2c3e50; padding: 8px 0; }
+.status-line.good { color: #27ae60; }
+.status-line.warn { color: #d35400; }
+
+/* steps */
+.steps {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 14px 20px; font-size: 13px;
+}
+.step { color: #95a5a6; }
+.step.active { color: #2c3e50; font-weight: 600; }
+.step.done { color: #27ae60; }
+.arrow { color: #dfe4e6; }
+
+/* workspace */
+.workspace-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
+}
+.pane { margin-bottom: 20px; }
+.pane-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 12px; gap: 12px;
+}
+.pane-head h2 { font-size: 16px; color: #2c3e50; }
+.pane-note { margin-top: 10px; font-size: 12.5px; color: #7f8c8d; line-height: 1.5; }
+
+.stage {
+    position: relative; background: #2c3e50; border-radius: 6px;
+    overflow: hidden; min-height: 240px; display: flex;
+    align-items: center; justify-content: center;
+}
+/* Shrink-wraps the image so every overlay shares its exact box. Anchoring
+   overlays to .stage instead offsets them by the letterbox margin whenever
+   the image's aspect ratio differs from the panel's - which a portrait plan
+   in a wide panel does dramatically. */
+.fit {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+    max-width: 100%;
+}
+.stage img {
+    display: block; max-width: 100%; height: auto;
+    cursor: crosshair; user-select: none; -webkit-user-drag: none;
+}
+.stage img[src=""] { display: none; }
+.fit canvas {
+    position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+    pointer-events: none; display: none;
+}
+.fit canvas.on { display: block; }
+.stage-empty { position: absolute; color: #7f8c8d; font-size: 14px; }
+
+.markers { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.marker {
+    position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px;
+    border-radius: 50%; background: #3498db; color: white;
+    font-size: 12px; font-weight: 700; line-height: 22px; text-align: center;
+    box-shadow: 0 0 0 2px white, 0 1px 4px rgba(0,0,0,.4);
+}
+.marker.pending { background: #e67e22; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.25); } }
+@media (prefers-reduced-motion: reduce) { .marker.pending { animation: none; } }
+
+/* legend */
+.legend { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: #7f8c8d; }
+.swatch {
+    width: 14px; height: 10px; border-radius: 2px; display: inline-block;
+    background: #2c7fb8;
+}
+.swatch.mid { background: #7fcdbb; }
+.swatch.hot { background: #e74c3c; }
+
+/* pairs */
+.pairs-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 14px;
+}
+.pairs-head h2 { font-size: 16px; color: #2c3e50; }
+.count {
+    display: inline-block; background: #ecf0f1; border-radius: 10px;
+    padding: 1px 9px; font-size: 13px; color: #7f8c8d; margin-left: 6px;
+}
+.pair-list { display: grid; gap: 6px; }
+.pair {
+    display: grid; grid-template-columns: 28px 1fr 1fr auto; gap: 12px;
+    align-items: center; padding: 8px 12px; background: #f8f9fa;
+    border-radius: 6px; font-size: 13px;
+}
+.pair .idx {
+    width: 22px; height: 22px; border-radius: 50%; background: #3498db;
+    color: white; text-align: center; line-height: 22px; font-weight: 700; font-size: 12px;
+}
+.pair .coord { color: #7f8c8d; font-variant-numeric: tabular-nums; }
+.pair .coord b { color: #2c3e50; font-weight: 600; }
+.pair .drop {
+    background: none; border: none; color: #c0392b; cursor: pointer;
+    font-size: 18px; line-height: 1; padding: 0 4px;
+}
+
+.quality { margin-top: 14px; padding: 12px 16px; border-radius: 6px; font-size: 14px; }
+.quality.excellent, .quality.good { background: #eafaf1; color: #1e8449; }
+.quality.usable { background: #fef5e7; color: #b9770e; }
+.quality.poor { background: #fdedec; color: #b03a2e; }
+
+/* toast */
+.toast {
+    position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+    background: #2c3e50; color: white; padding: 12px 20px; border-radius: 6px;
+    font-size: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.25); z-index: 100;
+    max-width: 90vw;
+}
+.toast.error { background: #c0392b; }
+
+@media (max-width: 1100px) {
+    .workspace-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+    .container { padding: 12px; }
+    .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .pair { grid-template-columns: 24px 1fr auto; }
+}
+
+/* Drag-a-grid mode */
+.modebar { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; padding: 16px 20px; }
+.mode-note { flex: 1 1 320px; font-size: 13px; color: #7f8c8d; line-height: 1.55; margin: 0; }
+
+.handle {
+    position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px;
+    border-radius: 50%; background: rgba(255,255,255,.92);
+    border: 3px solid #e67e22; cursor: grab; pointer-events: auto;
+    box-shadow: 0 1px 5px rgba(0,0,0,.45); touch-action: none;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #2c3e50; line-height: 1;
+}
+.handle:hover { border-color: #d35400; transform: scale(1.1); }
+.handle.dragging { cursor: grabbing; border-color: #3498db; transform: scale(1.15); }
+.handle:focus-visible { outline: 2px solid #3498db; outline-offset: 3px; }
+
+/* In grid mode the markers layer must receive pointer events for the handles,
+   while clicks still fall through to the image everywhere else. */
+.markers.interactive { pointer-events: none; }

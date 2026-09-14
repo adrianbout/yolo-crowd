@@ -16,7 +16,7 @@ from contextlib import asynccontextmanager
 
 from services.state_manager import StateManager
 from services.detection_service import DetectionService
-from api import cameras, roi, counting, websocket, dependencies, settings
+from api import cameras, roi, counting, websocket, dependencies, settings, floorplan
 
 # Configure logging
 logging.basicConfig(
@@ -140,6 +140,12 @@ app.include_router(
     settings.router,
     prefix="/api",
     tags=["settings"]
+)
+
+app.include_router(
+    floorplan.router,
+    prefix="/api",
+    tags=["floorplan"]
 )
 
 # Serve frontend static files

@@ -39,13 +39,19 @@ class CameraStream:
         rtsp_url: str,
         buffer_size: int = 1,
         reconnect_attempts: int = 3,
-        reconnect_delay: int = 5
+        reconnect_delay: int = 5,
+        fps_target: int = 15
     ):
         self.camera_id = camera_id
         self.rtsp_url = rtsp_url
         self.buffer_size = buffer_size
         self.reconnect_attempts = reconnect_attempts
         self.reconnect_delay = reconnect_delay
+        # Cap how fast we pull frames. The detection loop only ever consumes the
+        # newest frame, so decoding at the source's native rate (often 30-60fps)
+        # burns CPU on frames that are discarded before anything looks at them.
+        # 0 or negative disables the cap (decode as fast as the source allows).
+        self.fps_target = fps_target
 
         self.frame_queue: Queue = Queue(maxsize=buffer_size)
         self.latest_frame: Optional[np.ndarray] = None
@@ -122,6 +128,9 @@ class CameraStream:
                     logger.info(f"Successfully connected to video file {self.camera_id} ({self.frame_width}x{self.frame_height}, {self.video_fps:.1f} FPS)")
                 else:
                     logger.info(f"Successfully connected to camera {self.camera_id} ({self.frame_width}x{self.frame_height})")
+
+                if self.fps_target and self.fps_target > 0:
+                    logger.info(f"Camera {self.camera_id}: capture capped at {self.fps_target} fps")
                 return True
             else:
                 self.connected = False
@@ -136,6 +145,7 @@ class CameraStream:
     def _capture_loop(self):
         """Main capture loop running in thread"""
         attempt = 0
+        next_frame_time = time.time()
 
         while self.running:
             # Try to connect
@@ -192,9 +202,25 @@ class CameraStream:
                     self.frame_count = 0
                     self.last_fps_time = current_time
 
-                # For video files, add delay to match real-time playback
-                if self.is_video_file and self.frame_delay > 0:
-                    time.sleep(self.frame_delay)
+                # Pace the loop. The detection loop only reads the newest frame,
+                # so pulling faster than fps_target just wastes CPU on frames
+                # that get overwritten before they're ever used. For video files
+                # we additionally never run faster than native playback speed.
+                interval = 0.0
+                if self.fps_target and self.fps_target > 0:
+                    interval = 1.0 / self.fps_target
+                if self.is_video_file and self.frame_delay > interval:
+                    interval = self.frame_delay
+
+                if interval > 0:
+                    next_frame_time += interval
+                    sleep_time = next_frame_time - time.time()
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+                    else:
+                        # Fell behind (slow source or hitch) - reset the schedule
+                        # rather than spinning to catch up on stale frames.
+                        next_frame_time = time.time()
 
             except Exception as e:
                 logger.error(f"Camera {self.camera_id}: Error reading frame: {e}")
@@ -270,7 +296,8 @@ class CameraStreamManager:
                 rtsp_url=rtsp_url,
                 buffer_size=self.buffer_size,
                 reconnect_attempts=reconnect_attempts,
-                reconnect_delay=reconnect_delay
+                reconnect_delay=reconnect_delay,
+                fps_target=fps_target
             )
             self.streams[camera_id] = stream
             logger.info(f"Added camera: {camera_id} - {name}")
@@ -432,6 +459,9 @@ class CameraStreamManager:
         global_settings = cameras_config.get("global_settings", {})
         reconnect_attempts = global_settings.get("reconnect_attempts", 3)
         reconnect_delay = global_settings.get("reconnect_delay_seconds", 5)
+        # Global default capture rate; a camera may override it with its own
+        # "fps_target". Set to 0 to decode as fast as the source allows.
+        default_fps_target = global_settings.get("fps_target", 15)
 
         for camera_data in cameras_config.get("cameras", []):
             # Build RTSP URL with properly encoded credentials
@@ -442,6 +472,7 @@ class CameraStreamManager:
                 name=camera_data["name"],
                 rtsp_url=rtsp_url,
                 enabled=camera_data.get("enabled", True),
+                fps_target=camera_data.get("fps_target", default_fps_target),
                 reconnect_attempts=reconnect_attempts,
                 reconnect_delay=reconnect_delay
             )

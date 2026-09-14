@@ -11,6 +11,7 @@ from .detector import YOLODetector, Detection
 from .thermal_detector import ThermalYOLODetector
 from .blob_hotspot_detector import BlobHotspotDetector
 from .pose_detector import PoseYOLODetector
+from .yolo26_detector import YOLO26Detector
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ class DetectorFactory:
         rgb_model_path: str = "weights/yolo-crowd.pt",
         thermal_model_path: str = "weights/yolo-thermal-approche2.pt",
         pose_model_path: str = "weights/yolo11m-pose.pt",
+        yolo26_model_path: str = "weights/yolo26m.pt",
         device: str = "cuda",
         half_precision: bool = True,
         default_confidence: float = 0.25,
@@ -43,6 +45,7 @@ class DetectorFactory:
         self.thermal_detector: Optional[ThermalYOLODetector] = None
         self.blob_hotspot_detector: Optional[BlobHotspotDetector] = None
         self.pose_detector: Optional[PoseYOLODetector] = None
+        self.yolo26_detector: Optional[YOLO26Detector] = None
 
         # Track per-camera model selection (set via detection_settings.detection_model)
         self.camera_models: Dict[str, str] = {}
@@ -91,6 +94,29 @@ class DetectorFactory:
             logger.warning(f"Pose model not found: {e}. Pose option will fall back to RGB detector.")
             self.pose_detector = None
 
+        # Initialize YOLO26 (Ultralytics 2026 generation). Optional: it needs
+        # both the weights and ultralytics >= 8.4, and the node should keep
+        # running on the other detectors when either is absent.
+        logger.info("Initializing YOLO26 detector...")
+        try:
+            self.yolo26_detector = YOLO26Detector(
+                model_path=yolo26_model_path,
+                device=device,
+                confidence_threshold=default_confidence,
+                iou_threshold=default_iou,
+                img_size=default_img_size,
+                half_precision=half_precision
+            )
+        except FileNotFoundError as e:
+            logger.warning(f"YOLO26 weights not found: {e}. Option will fall back to RGB detector.")
+            self.yolo26_detector = None
+        except Exception as e:
+            logger.warning(
+                f"YOLO26 unavailable ({e}). This usually means ultralytics is "
+                f"older than 8.4. Option will fall back to RGB detector."
+            )
+            self.yolo26_detector = None
+
         logger.info("DetectorFactory initialized successfully")
 
     def register_camera_model(self, camera_id: str, detection_model: str):
@@ -119,6 +145,8 @@ class DetectorFactory:
             return self.blob_hotspot_detector
         elif model == "pose" and self.pose_detector:
             return self.pose_detector
+        elif model == "yolo26" and self.yolo26_detector:
+            return self.yolo26_detector
         return self.rgb_detector
 
     def detect_batch(
@@ -146,6 +174,7 @@ class DetectorFactory:
         thermal_indices = []
         blob_indices = []
         pose_indices = []
+        yolo26_indices = []
 
         for idx, camera_id in enumerate(camera_ids):
             model = self.camera_models.get(camera_id, "rgb")
@@ -155,6 +184,8 @@ class DetectorFactory:
                 blob_indices.append(idx)
             elif model == "pose" and self.pose_detector:
                 pose_indices.append(idx)
+            elif model == "yolo26" and self.yolo26_detector:
+                yolo26_indices.append(idx)
             else:
                 rgb_indices.append(idx)
 
@@ -219,6 +250,21 @@ class DetectorFactory:
                 preprocessing_configs=pose_preprocessing_configs
             )
             all_detections.update(pose_detections)
+
+        # Process YOLO26 frames
+        if yolo26_indices and self.yolo26_detector:
+            y26_frames = [frames[i] for i in yolo26_indices]
+            y26_camera_ids = [camera_ids[i] for i in yolo26_indices]
+            y26_inference_configs = [inference_configs[i] for i in yolo26_indices]
+            y26_preprocessing_configs = [preprocessing_configs[i] for i in yolo26_indices] if preprocessing_configs else None
+
+            y26_detections = self.yolo26_detector.detect_batch(
+                frames=y26_frames,
+                camera_ids=y26_camera_ids,
+                inference_configs=y26_inference_configs,
+                preprocessing_configs=y26_preprocessing_configs
+            )
+            all_detections.update(y26_detections)
 
         return all_detections
 

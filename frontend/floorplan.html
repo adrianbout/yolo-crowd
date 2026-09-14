@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floor Plan - SmartChairCounter</title>
+<link rel="stylesheet" href="css/floorplan.css">
+</head>
+<body>
+
+<div class="container">
+
+    <header class="header">
+        <div>
+            <h1>Floor Plan</h1>
+            <p class="sub">Match each camera's view to the plan so traffic reads across the building.</p>
+        </div>
+        <div class="header-right">
+            <a class="btn ghost" href="index.html">&larr; Dashboard</a>
+        </div>
+    </header>
+
+    <!-- No plan yet -->
+    <section id="emptyState" class="panel empty" hidden>
+        <h2>No floor plan yet</h2>
+        <p>Upload a plan of the building. Cameras are matched to it afterwards, one at a time.</p>
+        <button class="btn primary" id="emptyUploadBtn">Upload a floor plan</button>
+        <p class="hint">PNG, JPEG or WebP, up to 25&nbsp;MB.</p>
+    </section>
+
+    <!-- Workspace -->
+    <div id="workspace" hidden>
+
+        <section class="panel toolbar">
+            <div class="field">
+                <label for="cameraSelect">Camera</label>
+                <select id="cameraSelect"><option value="">Select a camera&hellip;</option></select>
+            </div>
+            <div class="field grow">
+                <label>Status</label>
+                <div id="calStatus" class="status-line">Pick a camera to begin.</div>
+            </div>
+            <div class="field">
+                <label>Plan</label>
+                <div class="btn-row">
+                    <button class="btn" id="uploadBtn">Replace plan</button>
+                    <button class="btn" id="heatBtn" aria-pressed="false">Show heatmap</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel modebar">
+            <div class="field">
+                <label>Method</label>
+                <div class="btn-row">
+                    <button class="btn" id="modeQuadBtn" aria-pressed="true">Drag a grid</button>
+                    <button class="btn" id="modePointsBtn" aria-pressed="false">Click point pairs</button>
+                </div>
+            </div>
+            <p class="mode-note" id="modeNote">
+                Drag the four corners so the grid covers the same patch of floor in both pictures.
+                The grid lines should follow the floor&rsquo;s own lines &mdash; tiles, kerbs, wall bases.
+            </p>
+        </section>
+
+        <section class="panel steps" id="stepBar">
+            <span class="step" id="step1">1 &middot; Click a landmark in the camera view</span>
+            <span class="arrow">&rarr;</span>
+            <span class="step" id="step2">2 &middot; Click the same spot on the plan</span>
+            <span class="arrow">&rarr;</span>
+            <span class="step" id="step3">3 &middot; Repeat for at least 4 points, then save</span>
+        </section>
+
+        <div class="workspace-grid">
+
+            <section class="panel pane">
+                <div class="pane-head">
+                    <h2>Camera view</h2>
+                    <div class="pane-tools">
+                        <button class="btn small" id="refreshFrameBtn" title="Grab a fresh frame">Refresh</button>
+                    </div>
+                </div>
+                <div class="stage" id="cameraStage">
+                    <div class="fit" id="cameraFit">
+                        <img id="cameraImage" alt="Camera view">
+                        <canvas id="cameraGrid" class="grid-canvas"></canvas>
+                        <div class="markers" id="cameraMarkers"></div>
+                    </div>
+                    <div class="stage-empty" id="cameraEmpty">Select a camera</div>
+                </div>
+                <p class="pane-note">Pick spots <strong>on the floor</strong> &mdash; door thresholds, pillar bases, corners of floor markings. A point on a wall or a table top will bend the whole mapping.</p>
+            </section>
+
+            <section class="panel pane">
+                <div class="pane-head">
+                    <h2>Floor plan</h2>
+                    <div class="pane-tools">
+                        <span class="legend" id="heatLegend" hidden>
+                            <i class="swatch"></i> quiet
+                            <i class="swatch mid"></i>
+                            <i class="swatch hot"></i> busy
+                        </span>
+                    </div>
+                </div>
+                <div class="stage" id="planStage">
+                    <div class="fit" id="planFit">
+                        <img id="planImage" alt="Floor plan">
+                        <canvas id="heatCanvas"></canvas>
+                        <canvas id="planGrid" class="grid-canvas"></canvas>
+                        <div class="markers" id="planMarkers"></div>
+                    </div>
+                </div>
+                <p class="pane-note">The same spot, clicked on the plan. Spread points across the area the camera sees &mdash; points bunched in one corner cannot fix a perspective.</p>
+            </section>
+
+        </div>
+
+        <section class="panel pairs">
+            <div class="pairs-head">
+                <h2>Matched points <span class="count" id="pairCount">0</span></h2>
+                <div class="btn-row">
+                    <button class="btn" id="undoBtn" disabled>Undo last</button>
+                    <button class="btn danger" id="clearBtn" disabled>Clear all</button>
+                    <button class="btn primary" id="saveBtn" disabled>Save calibration</button>
+                </div>
+            </div>
+            <div id="pairList" class="pair-list">
+                <p class="hint">No points yet. Four is the minimum; five or six absorbs a mis-click.</p>
+            </div>
+            <div id="quality" class="quality" hidden></div>
+        </section>
+
+    </div>
+
+</div>
+
+<input type="file" id="fileInput" accept="image/png,image/jpeg,image/webp" hidden>
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/floorplan.js"></script>
+</body>
+</html>

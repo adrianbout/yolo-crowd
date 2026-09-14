@@ -4,11 +4,24 @@ Manage ROI polygons for cameras
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Dict
+from typing import List, Dict, Optional
 from pydantic import BaseModel
 from .dependencies import get_state_manager, get_detection_service
 
 router = APIRouter()
+
+
+class ROIGate(BaseModel):
+    """
+    Two-point line across a flow zone, with named sides.
+
+    Names are what the dashboard shows for a crossing ("lobby -> offices"),
+    so they should read as places rather than as A and B.
+    """
+    points: List[List[int]]  # exactly 2 points
+    side_a: str = "A"
+    side_b: str = "B"
+    name: str = "gate"
 
 
 class ROIPolygon(BaseModel):
@@ -16,6 +29,11 @@ class ROIPolygon(BaseModel):
     name: str
     points: List[List[int]]
     description: str = ""
+    # Seating zones: seats in this zone. Falls back to the camera's
+    # totalChairs when unset, so pre-existing cameras keep their capacity.
+    capacity: Optional[int] = None
+    # Flow zones: the gate whose crossings are counted.
+    gate: Optional[ROIGate] = None
 
 
 class ROIUpdate(BaseModel):
@@ -49,7 +67,9 @@ async def update_camera_roi(camera_id: str, roi_update: ROIUpdate, detection_ser
     """Update ROI configuration for a camera"""
     roi_config = {
         "enabled": roi_update.enabled,
-        "polygons": [p.dict() for p in roi_update.polygons],
+        # exclude_none keeps a seating zone free of an empty gate and a flow
+        # zone free of a null capacity, so the saved config stays readable.
+        "polygons": [p.model_dump(exclude_none=True) for p in roi_update.polygons],
         "notes": roi_update.notes
     }
 

@@ -41,7 +41,7 @@ class CameraPosition(BaseModel):
 
 class CameraDetectionSettings(BaseModel):
     """Per-camera detection settings override"""
-    detection_model: str = "rgb"  # rgb, thermal, blob_hotspot, pose
+    detection_model: str = "rgb"  # rgb, thermal, blob_hotspot, pose, yolo26
     confidence_threshold: float = 0.25
     iou_threshold: float = 0.45
     img_size: int = 640
@@ -64,6 +64,9 @@ class CameraCreate(BaseModel):
     position: CameraPosition = CameraPosition()
     totalChairs: int = 0  # Total chairs available for empty chairs calculation
     detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
+    # Which metric pipeline this camera feeds. Unset inherits NODE_ROLE, so a
+    # node dedicated to one purpose needs no per-camera role at all.
+    role: Optional[str] = None  # seating, flow
 
 
 class CameraUpdate(BaseModel):
@@ -77,6 +80,7 @@ class CameraUpdate(BaseModel):
     totalChairs: Optional[int] = None  # Total chairs available for empty chairs calculation
     detection_settings: Optional[CameraDetectionSettings] = None  # Per-camera overrides
     show_boxes: Optional[bool] = None  # Show detection bounding boxes on video feed
+    role: Optional[str] = None  # seating, flow
 
 
 @router.get("/cameras")
@@ -134,6 +138,119 @@ async def get_available_profiles(state_manager = Depends(get_state_manager)) -> 
     return state_manager.profiles.get("profiles", {})
 
 
+@router.get("/node")
+async def get_node_identity(detection_service = Depends(get_detection_service)) -> Dict:
+    """
+    This node's identity and the choices available on it.
+
+    The UI reads `models` to populate the per-camera dropdown, and only lists
+    detectors that actually loaded - a missing weights file means that model
+    is not offered rather than failing when selected.
+    """
+    node = detection_service.node
+    factory = detection_service.detector_factory
+
+    models = [
+        {"value": "rgb", "label": "RGB (yolo-crowd)", "available": True},
+        {
+            "value": "pose",
+            "label": "Pose (yolo11m-pose)",
+            "available": bool(factory and factory.pose_detector),
+        },
+        {
+            "value": "thermal",
+            "label": "Thermal",
+            "available": bool(factory and factory.thermal_detector),
+        },
+        {
+            "value": "blob_hotspot",
+            "label": "Blob hotspot",
+            "available": bool(factory and factory.blob_hotspot_detector),
+        },
+        {
+            "value": "yolo26",
+            "label": "YOLO26",
+            # False when the weights are missing or ultralytics predates 8.4,
+            # so the dashboard can grey it out rather than offer a model that
+            # would silently fall back to RGB.
+            "available": bool(factory and factory.yolo26_detector),
+        },
+    ]
+
+    return {
+        **node.to_dict(),
+        "roles": ["seating", "flow"],
+        "models": models,
+    }
+
+
+@router.get("/cameras/{camera_id}/role")
+async def get_camera_role(
+    camera_id: str,
+    state_manager = Depends(get_state_manager),
+    detection_service = Depends(get_detection_service)
+) -> Dict:
+    """Effective role for a camera, and whether it is inherited from the node."""
+    camera = state_manager.get_camera_config(camera_id)
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    return {
+        "camera_id": camera_id,
+        "role": detection_service.node.resolve_role(camera),
+        "explicit": camera.get("role") is not None,
+        "node_role": detection_service.node.node_role,
+    }
+
+
+@router.get("/cameras/{camera_id}/heatmap")
+async def get_camera_heatmap(
+    camera_id: str,
+    state_manager = Depends(get_state_manager),
+    detection_service = Depends(get_detection_service)
+) -> Dict:
+    """
+    Accumulated traffic heatmap for a flow camera.
+
+    404 on a seating camera rather than an empty grid: a zone with no traffic
+    pattern is a different thing from one that has seen none yet.
+    """
+    camera = state_manager.get_camera_config(camera_id)
+    if not camera:
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    role = detection_service.node.resolve_role(camera)
+    if role != "flow":
+        raise HTTPException(
+            status_code=404,
+            detail=f"Camera '{camera_id}' has role '{role}'; heatmaps are flow-only"
+        )
+
+    heatmap = detection_service.get_heatmap(camera_id)
+    return {
+        "camera_id": camera_id,
+        "role": role,
+        # None until the first flow detection lands, which the dashboard
+        # shows as "no traffic yet" rather than a blank grid.
+        "heatmap": heatmap,
+    }
+
+
+@router.post("/cameras/{camera_id}/heatmap/reset")
+async def reset_camera_heatmap(
+    camera_id: str,
+    state_manager = Depends(get_state_manager),
+    detection_service = Depends(get_detection_service)
+) -> Dict:
+    """Clear accumulated traffic - after physically moving a camera, or re-drawing its gate."""
+    if not state_manager.get_camera_config(camera_id):
+        raise HTTPException(status_code=404, detail="Camera not found")
+
+    detection_service.reset_heatmap(camera_id)
+    logger.info(f"Heatmap reset for camera {camera_id}")
+    return {"camera_id": camera_id, "status": "reset"}
+
+
 @router.post("/cameras")
 async def create_camera(
     camera: CameraCreate,
@@ -170,7 +287,8 @@ async def create_camera(
         "profile": profile,
         "position": camera.position.dict(),
         "totalChairs": camera.totalChairs,
-        "detection_settings": camera.detection_settings.dict() if camera.detection_settings else None
+        "detection_settings": camera.detection_settings.dict() if camera.detection_settings else None,
+        "role": camera.role
     }
 
     # Add to cameras list
@@ -190,7 +308,8 @@ async def create_camera(
 async def update_camera(
     camera_id: str,
     camera: CameraUpdate,
-    state_manager = Depends(get_state_manager)
+    state_manager = Depends(get_state_manager),
+    detection_service = Depends(get_detection_service)
 ) -> Dict:
     """Update an existing camera"""
     # Find camera
@@ -207,6 +326,10 @@ async def update_camera(
 
     # Update fields
     existing = cameras_list[camera_index]
+
+    # Remember the model in force before the edit, so a switch can be detected
+    # and the camera's tracker session restarted.
+    previous_model = (existing.get("detection_settings") or {}).get("detection_model", "rgb")
 
     # Debug logging
     logger.info(f"Updating camera {camera_id}: totalChairs from {existing.get('totalChairs', 'N/A')} to {camera.totalChairs}")
@@ -234,8 +357,25 @@ async def update_camera(
     if camera.show_boxes is not None:
         existing["show_boxes"] = camera.show_boxes
 
+    if camera.role is not None:
+        role = camera.role.strip().lower()
+        if role not in ("seating", "flow"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"role must be 'seating' or 'flow', got '{camera.role}'"
+            )
+        existing["role"] = role
+
     # Save to file
     _save_cameras_config(state_manager)
+
+    # Apply the detection model live. The factory holds every detector in
+    # memory and routes per camera, so a switch is a routing change rather
+    # than a reload - no restart needed.
+    new_model = (existing.get("detection_settings") or {}).get("detection_model", "rgb")
+    model_changed = new_model != previous_model
+    if model_changed:
+        detection_service.switch_camera_model(camera_id, new_model)
 
     logger.info(f"Updated camera: {camera_id} - totalChairs is now {existing['totalChairs']}")
 

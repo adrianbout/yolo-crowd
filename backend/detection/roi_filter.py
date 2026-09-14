@@ -12,13 +12,90 @@ from .detector import Detection
 logger = logging.getLogger(__name__)
 
 
-class ROIPolygon:
-    """Represents a Region of Interest polygon"""
+class ROIGate:
+    """
+    A two-point line across a flow zone, with each side named.
 
-    def __init__(self, name: str, points: List[List[int]], description: str = ""):
+    Sides are named rather than numbered so a crossing reads as
+    "lobby -> offices" on the dashboard without a legend. The names are
+    stored on every crossing row, so renaming a side later does not rewrite
+    what history says.
+    """
+
+    def __init__(
+        self,
+        points: List[List[int]],
+        side_a: str = "A",
+        side_b: str = "B",
+        name: str = "gate"
+    ):
+        if len(points) != 2:
+            raise ValueError(f"Gate '{name}' needs exactly 2 points, got {len(points)}")
+        self.name = name
+        self.points = np.array(points, dtype=np.int32)
+        self.side_a = side_a
+        self.side_b = side_b
+
+    def side_of(self, point: Tuple[float, float]) -> int:
+        """
+        Which side of the gate a point falls on.
+
+        Returns +1 for side B, -1 for side A, 0 when exactly on the line.
+        A crossing is a change of sign between two observations of one track.
+        """
+        (x1, y1), (x2, y2) = self.points
+        px, py = point
+        cross = (x2 - x1) * (py - y1) - (y2 - y1) * (px - x1)
+        if cross > 0:
+            return 1
+        if cross < 0:
+            return -1
+        return 0
+
+    def direction_label(self, from_side: int, to_side: int) -> Optional[Dict[str, str]]:
+        """
+        Name a transition, or None when it is not a crossing.
+
+        Sign 0 (exactly on the line) is deliberately not a crossing - treating
+        it as one would double-count anyone who pauses on the threshold.
+        """
+        if from_side == 0 or to_side == 0 or from_side == to_side:
+            return None
+        if from_side < 0:
+            return {"direction": "a_to_b", "side_from": self.side_a, "side_to": self.side_b}
+        return {"direction": "b_to_a", "side_from": self.side_b, "side_to": self.side_a}
+
+    def to_dict(self) -> Dict:
+        return {
+            "name": self.name,
+            "points": self.points.tolist(),
+            "side_a": self.side_a,
+            "side_b": self.side_b
+        }
+
+
+class ROIPolygon:
+    """
+    A Region of Interest polygon.
+
+    Carries the fields each role needs: `capacity` for seating zones,
+    `gate` for flow zones. Both are optional, so a zone drawn before roles
+    existed still loads and behaves as it did.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        points: List[List[int]],
+        description: str = "",
+        capacity: Optional[int] = None,
+        gate: Optional[ROIGate] = None
+    ):
         self.name = name
         self.points = np.array(points, dtype=np.int32)
         self.description = description
+        self.capacity = capacity
+        self.gate = gate
 
     def contains_point(self, point: Tuple[float, float]) -> bool:
         """
@@ -33,11 +110,17 @@ class ROIPolygon:
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for JSON serialization"""
-        return {
+        d = {
             "name": self.name,
             "points": self.points.tolist(),
             "description": self.description
         }
+        # Omitted when unset, so a seating zone carries no empty gate and vice versa
+        if self.capacity is not None:
+            d["capacity"] = self.capacity
+        if self.gate is not None:
+            d["gate"] = self.gate.to_dict()
+        return d
 
 
 class ROIFilter:
@@ -69,15 +152,85 @@ class ROIFilter:
 
             polygons = []
             for poly_data in roi_data.get("polygons", []):
+                gate = None
+                gate_data = poly_data.get("gate")
+                if gate_data:
+                    try:
+                        gate = ROIGate(
+                            points=gate_data["points"],
+                            side_a=gate_data.get("side_a", "A"),
+                            side_b=gate_data.get("side_b", "B"),
+                            name=gate_data.get("name", "gate")
+                        )
+                    except (KeyError, ValueError) as e:
+                        # A malformed gate disables crossing counts for this zone
+                        # rather than taking the whole camera down.
+                        logger.error(
+                            f"Camera {camera_id}, zone "
+                            f"'{poly_data.get('name', 'unnamed')}': bad gate ({e})"
+                        )
+
                 polygon = ROIPolygon(
                     name=poly_data.get("name", "unnamed"),
                     points=poly_data["points"],
-                    description=poly_data.get("description", "")
+                    description=poly_data.get("description", ""),
+                    capacity=poly_data.get("capacity"),
+                    gate=gate
                 )
                 polygons.append(polygon)
 
             self.rois_by_camera[camera_id] = polygons
             logger.info(f"Loaded {len(polygons)} ROI polygons for camera {camera_id}")
+
+    def get_zones(self, camera_id: str) -> List[ROIPolygon]:
+        """Zones defined for a camera, empty when ROI filtering is off."""
+        if not self.roi_enabled.get(camera_id, False):
+            return []
+        return self.rois_by_camera.get(camera_id, [])
+
+    def get_capacity(
+        self,
+        camera_id: str,
+        zone: ROIPolygon,
+        camera_config: Optional[Dict] = None
+    ) -> int:
+        """
+        Seats in one zone.
+
+        A zone's own capacity wins. Otherwise the camera's `totalChairs` is
+        used, but only when the camera has a single zone - with several zones
+        that number describes the camera as a whole, and handing the full
+        figure to each zone would report a 5-chair camera as having 10 seats.
+        Multi-zone cameras must declare capacity per zone.
+        """
+        if zone.capacity is not None:
+            return int(zone.capacity)
+
+        if camera_config and len(self.rois_by_camera.get(camera_id, [])) == 1:
+            return int(camera_config.get("totalChairs", 0) or 0)
+
+        if camera_config and camera_config.get("totalChairs"):
+            logger.warning(
+                f"Camera {camera_id} zone '{zone.name}' has no capacity and the "
+                f"camera has multiple zones; set capacity per zone. Reporting 0."
+            )
+        return 0
+
+    def get_camera_capacity(self, camera_id: str, camera_config: Optional[Dict] = None) -> int:
+        """
+        Total seats visible to a camera.
+
+        The sum of whatever its zones declare, falling back to the camera's
+        `totalChairs` when no zone declares any - which is how every camera
+        configured before zone capacity existed still reports correctly.
+        """
+        zones = self.get_zones(camera_id)
+        declared = [z.capacity for z in zones if z.capacity is not None]
+        if declared:
+            return int(sum(declared))
+        if camera_config:
+            return int(camera_config.get("totalChairs", 0) or 0)
+        return 0
 
     def add_roi(self, camera_id: str, polygon: ROIPolygon):
         """
