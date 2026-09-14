@@ -199,6 +199,10 @@ function editCamera(cameraId) {
     document.getElementById('rtspUrl').value = rtspUrl;
     document.getElementById('cameraDescription').value = camera.position?.description || '';
     
+    // Role: empty string means inherit the node's role
+    document.getElementById('cameraRole').value = camera.role || '';
+    onCameraRoleChange();
+
     // Set totalChairs - ensure we're getting the right value
     const totalChairsValue = camera.totalChairs !== undefined ? camera.totalChairs : 0;
     document.getElementById('cameraTotalChairs').value = totalChairsValue;
@@ -258,6 +262,8 @@ function resetCameraForm() {
     document.getElementById('rtspUrl').value = '';
     document.getElementById('cameraDescription').value = '';
     document.getElementById('cameraTotalChairs').value = 0;
+    document.getElementById('cameraRole').value = '';
+    onCameraRoleChange();
 
     // Reset detection settings
     document.getElementById('cameraUseCustomSettings').checked = false;
@@ -478,6 +484,13 @@ async function saveCamera() {
         totalChairs: totalChairsFinal
     };
 
+    // Only send a role when one is chosen; omitting it keeps the camera on
+    // the node default rather than pinning it.
+    const roleValue = document.getElementById('cameraRole').value;
+    if (roleValue) {
+        cameraData.role = roleValue;
+    }
+
     // Debug: Log the totalChairs value being saved
     console.log(`Saving camera ${editId || 'NEW'} with totalChairs: ${cameraData.totalChairs}`);
     console.log('Full camera data being sent:', JSON.stringify(cameraData, null, 2));
@@ -660,3 +673,53 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+// ---------------------------------------------------------------------------
+// Camera role
+// ---------------------------------------------------------------------------
+
+// The node's own identity, fetched once. Lets the form say what "inherit"
+// actually resolves to instead of leaving it abstract.
+let nodeIdentity = null;
+
+async function loadNodeIdentity() {
+    try {
+        const response = await fetch('/api/node');
+        if (!response.ok) return;
+        nodeIdentity = await response.json();
+        onCameraRoleChange();
+    } catch (error) {
+        console.warn('Could not load node identity:', error);
+    }
+}
+
+function onCameraRoleChange() {
+    const select = document.getElementById('cameraRole');
+    const hint = document.getElementById('cameraRoleHint');
+    const seatingGroup = document.getElementById('cameraSeatingGroup');
+    if (!select) return;
+
+    const chosen = select.value;
+    const effective = chosen || (nodeIdentity ? nodeIdentity.node_role : null);
+
+    if (hint) {
+        if (!chosen) {
+            hint.textContent = effective
+                ? `Inheriting "${effective}" from this node (${nodeIdentity.node_id}).`
+                : 'Inheriting this node\u2019s role.';
+        } else if (chosen === 'seating') {
+            hint.textContent = 'Counts people against chair capacity. Draw zones tightly around the seats \u2014 a loose zone counts passers-by as occupants.';
+        } else {
+            hint.textContent = 'Counts directional crossings of a gate, and builds a heatmap over the zone. Chair capacity does not apply.';
+        }
+    }
+
+    // Chair capacity is meaningless on a flow camera, so hide it rather than
+    // inviting a number that will never be used.
+    if (seatingGroup) {
+        seatingGroup.style.display = (effective === 'flow') ? 'none' : '';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadNodeIdentity);
